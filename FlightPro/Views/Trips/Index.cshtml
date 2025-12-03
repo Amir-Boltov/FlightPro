@@ -1,0 +1,84 @@
+﻿@model IEnumerable<FlightPro.Models.PackageModel>
+@{
+    ViewData["Title"] = "Trips";
+}
+
+<div class="container mt-4">
+    <h2>Available Trips</h2>
+
+    <form method="get" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Search destinations (e.g., Paris, Japan)..." />
+            <button type="submit" class="btn btn-primary">Search</button>
+            @if (!string.IsNullOrEmpty(ViewBag.Search))
+            {
+                <a href="/Trips" class="btn btn-secondary">Clear</a>
+            }
+        </div>
+    </form>
+
+    <div class="row row-cols-1 row-cols-md-3 row-cols-lg-5 g-4">
+        @foreach (var package in Model)
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+
+                    <img src="@package.MainImageUrl" class="card-img-top" alt="@package.Title"
+                         style="height: 150px; object-fit: cover;">
+
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="card-title fw-bold">@package.Title</h6>
+                        <p class="card-text text-muted small">
+                            <i class="bi bi-geo-alt-fill"></i> @package.Destination, @package.Country
+                        </p>
+
+                        <div class="mt-auto mb-2">
+                            @if (package.DiscountedPrice.HasValue)
+                            {
+                                <div>
+                                    <span class="text-muted text-decoration-line-through small">$@package.Price.ToString("N0")</span>
+                                    <span class="text-danger fw-bold ms-1">$@package.DiscountedPrice.Value.ToString("N0")</span>
+                                    <span class="badge bg-danger rounded-pill">SALE</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="fw-bold">$@package.Price.ToString("N0")</span>
+                            }
+                        </div>
+
+                        <p class="card-text small mb-2">
+                            <i class="bi bi-calendar"></i> @package.StartDate.ToString("MMM dd") - @package.EndDate.ToString("MMM dd")
+                        </p>
+
+                        @if (package.AvailableRooms > 0)
+                        {
+                            <div class="d-grid gap-2">
+                                <small class="text-success text-center">@package.AvailableRooms rooms left</small>
+                                <a href="/Booking/Book/@package.Id" class="btn btn-outline-primary btn-sm">Add to Cart</a>
+                                <a href="/Booking/BuyNow/@package.Id" class="btn btn-success btn-sm">Buy Now</a>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-grid gap-2">
+                                <small class="text-danger text-center fw-bold">Fully Booked!</small>
+                                <a href="/WaitingList/Join/@package.Id" class="btn btn-warning btn-sm">
+                                    <i class="bi bi-clock-history"></i> Join Waiting List
+                                </a>
+                            </div>
+                        }
+
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info text-center mt-5">
+            No trips found matching your search.
+        </div>
+    }
+</div>

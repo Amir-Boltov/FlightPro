@@ -1,8 +1,43 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Home";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="jumbotron bg-light p-5 rounded mb-4">
+    <h1 class="display-4">Welcome to TravelAgency</h1>
+    <p class="lead">Discover amazing trips around the world and book your dream vacation today!</p>
+    <a class="btn btn-primary btn-lg" href="@Url.Action("Index", "Packages")">Browse Trips</a>
+</div>
+<!-- Replace sample trips below with trips from the database, add rotating
+     functionality if needed. -->
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <img src="/images/sample1.jpg" class="card-img-top" alt="Paris">
+            <div class="card-body">
+                <h5 class="card-title">Paris Honeymoon</h5>
+                <p class="card-text">Experience romance in the city of love.</p>
+                <a href="#" class="btn btn-primary">View Trip</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <img src="/images/sample2.jpg" class="card-img-top" alt="Maldives">
+            <div class="card-body">
+                <h5 class="card-title">Maldives Adventure</h5>
+                <p class="card-text">Relax on pristine beaches and explore the ocean.</p>
+                <a href="#" class="btn btn-primary">View Trip</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <img src="/images/sample3.jpg" class="card-img-top" alt="Tokyo">
+            <div class="card-body">
+                <h5 class="card-title">Tokyo City Tour</h5>
+                <p class="card-text">Discover Japan’s vibrant culture and cuisine.</p>
+                <a href="#" class="btn btn-primary">View Trip</a>
+            </div>
+        </div>
+    </div>
 </div>
