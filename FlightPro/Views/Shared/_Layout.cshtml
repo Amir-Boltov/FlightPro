@@ -9,9 +9,11 @@
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <nav class="navbar navbar-expand-lg navbar-light bg-warning shadow-sm">
             <div class="container">
-                <a class="navbar-brand" href="@Url.Action("Index", "Home")">TravelAgency</a>
+                <a class="navbar-brand fw-bold" href="@Url.Action("Index", "Home")">
+                    <i class="bi bi-airplane-engines-fill"></i> TravelAgency
+                </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
                         aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -25,25 +27,31 @@
                         <li class="nav-item">
                             <a class="nav-link" href="@Url.Action("Index", "Trips")">Trips</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="@Url.Action("Contact", "Home")">Contact</a>
-                        </li>
                     </ul>
 
-                    <ul class="navbar-nav ms-auto">
-                        @if (User.Identity.IsAuthenticated)
+                    <ul class="navbar-nav ms-auto align-items-center">
+                        @using Microsoft.AspNetCore.Http
+                        @inject IHttpContextAccessor HttpContextAccessor
+
+                        @{
+                            // Since you used Session in your Login Controller, you must check Session here.
+                            // User.Identity.IsAuthenticated only works if you use Cookie Authentication middleware.
+                            var userEmail = HttpContextAccessor.HttpContext.Session.GetString("UserEmail");
+                            var userName = HttpContextAccessor.HttpContext.Session.GetString("UserName");
+                        }
+
+                        @if (!string.IsNullOrEmpty(userEmail))
                         {
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                                <a class="nav-link dropdown-toggle fw-bold" href="#" id="userDropdown" role="button"
                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                    @User.Identity.Name
+                                    Hello, @userName
                                 </a>
-                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                    <li><a class="dropdown-item" href="@Url.Action("Dashboard", "Bookings")">Dashboard</a></li>
+                                <ul class="dropdown-menu dropdown-menu-end border-0 shadow" aria-labelledby="userDropdown">
+                                    <li><a class="dropdown-item" href="@Url.Action("Dashboard", "Bookings")">My Bookings</a></li>
+                                    <li><hr class="dropdown-divider"></li>
                                     <li>
-                                        <form method="post" action="@Url.Action("Logout", "Account")" class="dropdown-item p-0">
-                                            <button type="submit" class="btn btn-link w-100 text-start">Logout</button>
-                                        </form>
+                                        <a class="dropdown-item text-danger" href="@Url.Action("Logout", "User")">Logout</a>
                                     </li>
                                 </ul>
                             </li>
@@ -51,10 +59,10 @@
                         else
                         {
                             <li class="nav-item">
-                                <a class="nav-link" href="@Url.Action("ViewLogin", "User")">Login</a>
+                                <a class="nav-link fw-bold" href="@Url.Action("ViewLogin", "User")">Login</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="@Url.Action("ViewRegister", "User")">Register</a>
+                                <a class="btn btn-dark btn-sm rounded-pill ms-2 text-white px-3" href="@Url.Action("ViewRegister", "User")">Register</a>
                             </li>
                         }
                     </ul>

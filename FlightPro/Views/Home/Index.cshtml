@@ -8,13 +8,18 @@
         <h1 class="display-3 fw-bold">Find Your Next Adventure</h1>
         <p class="lead mb-4">Search low fares to destinations around the world.</p>
 
-        <div class="row justify-content-center">
+        <div class="row justify-content-center mt-5">
             <div class="col-md-8">
-                <form action="/Trips/Index" method="get" class="bg-white p-3 rounded-pill shadow">
+                <form action="/Trips/Index" method="get" class="glass-search p-2 rounded-pill shadow-lg">
                     <div class="input-group">
-                        <span class="input-group-text bg-white border-0"><i class="bi bi-geo-alt"></i></span>
-                        <input type="text" name="search" class="form-control border-0" placeholder="Where do you want to go? (e.g. Paris, Japan)">
-                        <button class="btn btn-primary rounded-pill px-5 fw-bold" type="submit">Search</button>
+                        <span class="input-group-text bg-transparent border-0">
+                            <i class="bi bi-geo-alt text-white"></i>
+                        </span>
+
+                        <input type="text" name="search" class="form-control border-0 text-white"
+                               placeholder="Where to? (e.g. Paris)" aria-label="Search">
+
+                        <button class="btn btn-warning rounded-pill px-4 fw-bold" type="submit">Search</button>
                     </div>
                 </form>
             </div>
