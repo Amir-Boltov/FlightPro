@@ -54,11 +54,15 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 3,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Bookmark",
               "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
             },
             {
               "$type": "Document",
@@ -66,8 +70,8 @@
               "Title": "site.css",
               "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\wwwroot\\css\\site.css",
               "RelativeDocumentMoniker": "FlightPro\\wwwroot\\css\\site.css",
-              "ToolTip": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\wwwroot\\css\\site.css*",
-              "RelativeToolTip": "FlightPro\\wwwroot\\css\\site.css*",
+              "ToolTip": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\wwwroot\\css\\site.css",
+              "RelativeToolTip": "FlightPro\\wwwroot\\css\\site.css",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
               "WhenOpened": "2025-12-03T18:03:55.624Z",
@@ -92,9 +96,9 @@
               "Title": "Index.cshtml",
               "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Views\\Home\\Index.cshtml",
               "RelativeDocumentMoniker": "FlightPro\\Views\\Home\\Index.cshtml",
-              "ToolTip": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Views\\Home\\Index.cshtml*",
-              "RelativeToolTip": "FlightPro\\Views\\Home\\Index.cshtml*",
-              "ViewState": "AgIAAEEAAAAAAAAAAAAcwFAAAAAAAAAAAAAAAA==",
+              "ToolTip": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Views\\Home\\Index.cshtml",
+              "RelativeToolTip": "FlightPro\\Views\\Home\\Index.cshtml",
+              "ViewState": "AgIAAEEAAAAAAAAAAAAcwEsAAAAeAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
               "WhenOpened": "2025-12-03T11:24:42.359Z",
               "EditorCaption": ""
@@ -131,16 +135,12 @@
               "Title": "HomeController.cs",
               "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Controllers\\HomeController.cs",
               "RelativeDocumentMoniker": "FlightPro\\Controllers\\HomeController.cs",
-              "ToolTip": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Controllers\\HomeController.cs*",
-              "RelativeToolTip": "FlightPro\\Controllers\\HomeController.cs*",
+              "ToolTip": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Controllers\\HomeController.cs",
+              "RelativeToolTip": "FlightPro\\Controllers\\HomeController.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-12-03T11:01:30.428Z",
               "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
             },
             {
               "$type": "Document",
