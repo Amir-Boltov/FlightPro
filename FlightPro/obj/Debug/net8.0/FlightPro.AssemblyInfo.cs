@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FlightPro")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6ee5dae9e2289fd53f9c4f80d84f3f152775f0ca")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9d2213d5a6443d8303dc29de4aec97d1441f2d27")]
 [assembly: System.Reflection.AssemblyProductAttribute("FlightPro")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FlightPro")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
