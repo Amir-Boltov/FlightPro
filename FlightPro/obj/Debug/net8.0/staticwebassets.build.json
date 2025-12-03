@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "3NWdyi8OrHpdI3voK2N5cu4Vvup87NyAMmiaqP8oGfk=",
+  "Hash": "nXEr1w+NzB7sE0WD9g3/19gvF8oY8QyyS+FJ/fBmwlY=",
   "Source": "FlightPro",
   "BasePath": "_content/FlightPro",
   "Mode": "Default",
@@ -73,8 +73,8 @@
       "RelatedAsset": "",
       "AssetTraitName": "",
       "AssetTraitValue": "",
-      "Fingerprint": "c2tiyv64ts",
-      "Integrity": "pAGv4ietcJNk/EwsQZ5BN9+K4MuNYS2a9wl4Jw+q9D0=",
+      "Fingerprint": "34vayxzk3g",
+      "Integrity": "/Y0C44rcEC2iSQSovS0KUAKtZuyum5PPWiJ/rNOHB1U=",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\css\\site.css"
@@ -1321,7 +1321,7 @@
   ],
   "Endpoints": [
     {
-      "Route": "css/site.c2tiyv64ts.css",
+      "Route": "css/site.34vayxzk3g.css",
       "AssetFile": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\wwwroot\\css\\site.css",
       "Selectors": [],
       "ResponseHeaders": [
@@ -1331,7 +1331,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "362"
+          "Value": "1192"
         },
         {
           "Name": "Content-Type",
@@ -1339,11 +1339,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"pAGv4ietcJNk/EwsQZ5BN9+K4MuNYS2a9wl4Jw+q9D0=\""
+          "Value": "\"/Y0C44rcEC2iSQSovS0KUAKtZuyum5PPWiJ/rNOHB1U=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Wed, 03 Dec 2025 10:15:02 GMT"
+          "Value": "Wed, 03 Dec 2025 18:04:18 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -1353,7 +1353,7 @@
       "EndpointProperties": [
         {
           "Name": "fingerprint",
-          "Value": "c2tiyv64ts"
+          "Value": "34vayxzk3g"
         },
         {
           "Name": "label",
@@ -1361,7 +1361,7 @@
         },
         {
           "Name": "integrity",
-          "Value": "sha256-pAGv4ietcJNk/EwsQZ5BN9+K4MuNYS2a9wl4Jw+q9D0="
+          "Value": "sha256-/Y0C44rcEC2iSQSovS0KUAKtZuyum5PPWiJ/rNOHB1U="
         }
       ]
     },
@@ -1376,7 +1376,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "362"
+          "Value": "1192"
         },
         {
           "Name": "Content-Type",
@@ -1384,11 +1384,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"pAGv4ietcJNk/EwsQZ5BN9+K4MuNYS2a9wl4Jw+q9D0=\""
+          "Value": "\"/Y0C44rcEC2iSQSovS0KUAKtZuyum5PPWiJ/rNOHB1U=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Wed, 03 Dec 2025 10:15:02 GMT"
+          "Value": "Wed, 03 Dec 2025 18:04:18 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -1398,7 +1398,7 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-pAGv4ietcJNk/EwsQZ5BN9+K4MuNYS2a9wl4Jw+q9D0="
+          "Value": "sha256-/Y0C44rcEC2iSQSovS0KUAKtZuyum5PPWiJ/rNOHB1U="
         }
       ]
     },
@@ -1507,7 +1507,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Wed, 03 Dec 2025 11:25:44 GMT"
+          "Value": "Wed, 03 Dec 2025 17:51:17 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -1544,7 +1544,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Wed, 03 Dec 2025 11:25:44 GMT"
+          "Value": "Wed, 03 Dec 2025 17:51:17 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -1589,7 +1589,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Wed, 03 Dec 2025 11:25:44 GMT"
+          "Value": "Wed, 03 Dec 2025 17:51:17 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -1634,7 +1634,7 @@
         },
         {
           "Name": "Last-Modified",
-          "Value": "Wed, 03 Dec 2025 11:25:44 GMT"
+          "Value": "Wed, 03 Dec 2025 17:51:17 GMT"
         },
         {
           "Name": "Cache-Control",

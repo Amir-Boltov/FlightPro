@@ -3,20 +3,32 @@
   "WorkspaceRootPath": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|c:\\users\\amirs\\source\\repos\\amir-boltov\\flightpro\\flightpro\\models\\packagemodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|solutionrelative:flightpro\\models\\packagemodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|c:\\users\\amirs\\source\\repos\\amir-boltov\\flightpro\\flightpro\\views\\home\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|solutionrelative:flightpro\\views\\home\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|c:\\users\\amirs\\source\\repos\\amir-boltov\\flightpro\\flightpro\\controllers\\tripscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|solutionrelative:flightpro\\controllers\\tripscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|c:\\users\\amirs\\source\\repos\\amir-boltov\\flightpro\\flightpro\\wwwroot\\css\\site.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
+      "RelativeMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|solutionrelative:flightpro\\wwwroot\\css\\site.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|c:\\users\\amirs\\source\\repos\\amir-boltov\\flightpro\\flightpro\\controllers\\homecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|solutionrelative:flightpro\\controllers\\homecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|c:\\users\\amirs\\source\\repos\\amir-boltov\\flightpro\\flightpro\\views\\home\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|solutionrelative:flightpro\\views\\home\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+      "AbsoluteMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|c:\\users\\amirs\\source\\repos\\amir-boltov\\flightpro\\flightpro\\views\\shared\\_layout.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|solutionrelative:flightpro\\views\\shared\\_layout.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|c:\\users\\amirs\\source\\repos\\amir-boltov\\flightpro\\flightpro\\controllers\\usercontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|solutionrelative:flightpro\\controllers\\usercontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|c:\\users\\amirs\\source\\repos\\amir-boltov\\flightpro\\flightpro\\controllers\\tripscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|solutionrelative:flightpro\\controllers\\tripscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|c:\\users\\amirs\\source\\repos\\amir-boltov\\flightpro\\flightpro\\models\\packagemodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|solutionrelative:flightpro\\models\\packagemodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|c:\\users\\amirs\\source\\repos\\amir-boltov\\flightpro\\flightpro\\views\\trips\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
@@ -25,10 +37,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|c:\\users\\amirs\\source\\repos\\amir-boltov\\flightpro\\flightpro\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|solutionrelative:flightpro\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|c:\\users\\amirs\\source\\repos\\amir-boltov\\flightpro\\flightpro\\views\\shared\\_layout.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|solutionrelative:flightpro\\views\\shared\\_layout.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{5DAF2DB6-2121-455D-B340-06B6068AEB0E}|FlightPro\\FlightPro.csproj|c:\\users\\amirs\\source\\repos\\amir-boltov\\flightpro\\flightpro\\models\\errorviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -53,34 +61,64 @@
               "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
             },
             {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
+            },
+            {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 1,
+              "Title": "site.css",
+              "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\wwwroot\\css\\site.css",
+              "RelativeDocumentMoniker": "FlightPro\\wwwroot\\css\\site.css",
+              "ToolTip": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\wwwroot\\css\\site.css",
+              "RelativeToolTip": "FlightPro\\wwwroot\\css\\site.css",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
+              "WhenOpened": "2025-12-03T18:03:55.624Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "UserController.cs",
+              "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Controllers\\UserController.cs",
+              "RelativeDocumentMoniker": "FlightPro\\Controllers\\UserController.cs",
+              "ToolTip": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Controllers\\UserController.cs",
+              "RelativeToolTip": "FlightPro\\Controllers\\UserController.cs",
+              "ViewState": "AgIAAHgAAAAAAAAAAAAowFIAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-03T17:49:17.699Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
               "Title": "Index.cshtml",
               "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Views\\Home\\Index.cshtml",
               "RelativeDocumentMoniker": "FlightPro\\Views\\Home\\Index.cshtml",
               "ToolTip": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Views\\Home\\Index.cshtml",
               "RelativeToolTip": "FlightPro\\Views\\Home\\Index.cshtml",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAcAAAAAAAAAA==",
+              "ViewState": "AgIAAEEAAAAAAAAAAAAcwEsAAAAeAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
               "WhenOpened": "2025-12-03T11:24:42.359Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 3,
               "Title": "_Layout.cshtml",
               "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Views\\Shared\\_Layout.cshtml",
               "RelativeDocumentMoniker": "FlightPro\\Views\\Shared\\_Layout.cshtml",
               "ToolTip": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Views\\Shared\\_Layout.cshtml",
               "RelativeToolTip": "FlightPro\\Views\\Shared\\_Layout.cshtml",
-              "ViewState": "AgIAAAYAAAAAAAAAAAAAABcAAAAdAAAAAAAAAA==",
+              "ViewState": "AgIAACIAAAAAAAAAAAAwwDgAAABLAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
               "WhenOpened": "2025-12-03T11:21:20.251Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 5,
               "Title": "TripsController.cs",
               "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Controllers\\TripsController.cs",
               "RelativeDocumentMoniker": "FlightPro\\Controllers\\TripsController.cs",
@@ -93,7 +131,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
+              "Title": "HomeController.cs",
+              "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Controllers\\HomeController.cs",
+              "RelativeDocumentMoniker": "FlightPro\\Controllers\\HomeController.cs",
+              "ToolTip": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Controllers\\HomeController.cs",
+              "RelativeToolTip": "FlightPro\\Controllers\\HomeController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-03T11:01:30.428Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
               "Title": "PackageModel.cs",
               "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Models\\PackageModel.cs",
               "RelativeDocumentMoniker": "FlightPro\\Models\\PackageModel.cs",
@@ -106,7 +157,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 7,
               "Title": "Index.cshtml",
               "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Views\\Trips\\Index.cshtml",
               "RelativeDocumentMoniker": "FlightPro\\Views\\Trips\\Index.cshtml",
@@ -119,20 +170,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "HomeController.cs",
-              "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Controllers\\HomeController.cs",
-              "RelativeDocumentMoniker": "FlightPro\\Controllers\\HomeController.cs",
-              "ToolTip": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Controllers\\HomeController.cs",
-              "RelativeToolTip": "FlightPro\\Controllers\\HomeController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-03T11:01:30.428Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 10,
               "Title": "Privacy.cshtml",
               "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Views\\Home\\Privacy.cshtml",
               "RelativeDocumentMoniker": "FlightPro\\Views\\Home\\Privacy.cshtml",
@@ -145,7 +183,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 8,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\appsettings.json",
               "RelativeDocumentMoniker": "FlightPro\\appsettings.json",
@@ -158,7 +196,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 9,
               "Title": "ErrorViewModel.cs",
               "DocumentMoniker": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\Models\\ErrorViewModel.cs",
               "RelativeDocumentMoniker": "FlightPro\\Models\\ErrorViewModel.cs",

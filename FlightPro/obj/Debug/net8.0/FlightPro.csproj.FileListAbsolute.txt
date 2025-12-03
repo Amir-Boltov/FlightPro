@@ -9,6 +9,7 @@ C:\Users\amirs\source\repos\Amir-Boltov\FlightPro\FlightPro\bin\Debug\net8.0\Fli
 C:\Users\amirs\source\repos\Amir-Boltov\FlightPro\FlightPro\bin\Debug\net8.0\FlightPro.pdb
 C:\Users\amirs\source\repos\Amir-Boltov\FlightPro\FlightPro\bin\Debug\net8.0\Azure.Core.dll
 C:\Users\amirs\source\repos\Amir-Boltov\FlightPro\FlightPro\bin\Debug\net8.0\Azure.Identity.dll
+C:\Users\amirs\source\repos\Amir-Boltov\FlightPro\FlightPro\bin\Debug\net8.0\BCrypt.Net-Next.dll
 C:\Users\amirs\source\repos\Amir-Boltov\FlightPro\FlightPro\bin\Debug\net8.0\Microsoft.Bcl.AsyncInterfaces.dll
 C:\Users\amirs\source\repos\Amir-Boltov\FlightPro\FlightPro\bin\Debug\net8.0\Microsoft.Bcl.Cryptography.dll
 C:\Users\amirs\source\repos\Amir-Boltov\FlightPro\FlightPro\bin\Debug\net8.0\Microsoft.Data.SqlClient.dll

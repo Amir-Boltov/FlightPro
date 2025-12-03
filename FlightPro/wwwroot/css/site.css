@@ -1,22 +1,44 @@
-html {
-  font-size: 14px;
+/* Hero Section with Parallax-like feel */
+.hero-section {
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+    background-size: cover;
+    background-position: center;
+    height: 70vh; /* Takes up 70% of the screen */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-align: center;
+    border-radius: 0 0 50px 50px; /* Modern curved bottom */
+    margin-bottom: 3rem;
 }
 
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
+/* Card Hover Effects */
+.trip-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    border-radius: 15px;
+    overflow: hidden;
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    .trip-card:hover {
+        transform: translateY(-10px); /* Lifts the card up */
+        box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+    }
+
+    .trip-card img {
+        height: 250px;
+        object-fit: cover;
+    }
+
+/* Features Icons */
+.feature-box {
+    padding: 2rem;
+    text-align: center;
+    transition: 0.3s;
 }
 
-html {
-  position: relative;
-  min-height: 100%;
-}
-
-body {
-  margin-bottom: 60px;
-}
+    .feature-box:hover {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+    }

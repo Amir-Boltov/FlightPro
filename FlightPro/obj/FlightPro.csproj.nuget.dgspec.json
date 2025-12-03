@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Mitchashvim\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\FlightPro.csproj": {}
+    "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\FlightPro.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Mitchashvim\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\FlightPro.csproj": {
+    "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\FlightPro.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Mitchashvim\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\FlightPro.csproj",
+        "projectUniqueName": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\FlightPro.csproj",
         "projectName": "FlightPro",
-        "projectPath": "C:\\Users\\Mitchashvim\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\FlightPro.csproj",
-        "packagesPath": "C:\\Users\\Mitchashvim\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Mitchashvim\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\obj\\",
+        "projectPath": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\FlightPro.csproj",
+        "packagesPath": "C:\\Users\\amirs\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\amirs\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\Mitchashvim\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\amirs\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,7 +26,6 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
