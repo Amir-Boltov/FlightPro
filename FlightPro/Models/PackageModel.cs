@@ -15,7 +15,6 @@
         public string Destination { get; set; }
         public string Country { get; set; }
 
-        // Helper to determine the ACTUAL price to show
         public decimal FinalPrice => DiscountedPrice.HasValue ? DiscountedPrice.Value : Price;
     }
 }

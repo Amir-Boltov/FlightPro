@@ -1,19 +1,17 @@
-/* Hero Section with Parallax-like feel */
 .hero-section {
     background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/img/homepic.jpeg');
     background-size: cover;
     background-position: center;
-    height: 70vh; /* Takes up 70% of the screen */
+    height: 70vh;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
     text-align: center;
-    border-radius: 0 0 50px 50px; /* Modern curved bottom */
+    border-radius: 0 0 50px 50px;
     margin-bottom: 3rem;
 }
 
-/* Card Hover Effects */
 .trip-card {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: none;
@@ -22,7 +20,7 @@
 }
 
     .trip-card:hover {
-        transform: translateY(-10px); /* Lifts the card up */
+        transform: translateY(-10px);
         box-shadow: 0 15px 30px rgba(0,0,0,0.2);
     }
 
@@ -31,7 +29,6 @@
         object-fit: cover;
     }
 
-/* Features Icons */
 .feature-box {
     padding: 2rem;
     text-align: center;
@@ -43,28 +40,27 @@
         border-radius: 10px;
     }
 
-/* Glassmorphism Effect for Search Bar */
 .glass-search {
-    background: rgba(255, 255, 255, 0.25); /* 25% opaque white */
-    backdrop-filter: blur(10px); /* Blurs the background image behind it */
-    border: 1px solid rgba(255, 255, 255, 0.3); /* Subtle white border */
-    color: white; /* Text color */
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
 }
 
-    /* Force the Input field and Icon to be transparent */
+   
     .glass-search .form-control,
     .glass-search .input-group-text {
         background: transparent !important;
         border: none;
-        color: white; /* Typing text color */
+        color: white;
     }
 
-        /* Change placeholder color (e.g. "Where do you want to go?") to light white */
+        
         .glass-search .form-control::placeholder {
             color: rgba(255, 255, 255, 0.8);
         }
 
-        /* Remove the blue glow when clicking */
+        
         .glass-search .form-control:focus {
             box-shadow: none;
             background: transparent;

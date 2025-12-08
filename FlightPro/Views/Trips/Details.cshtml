@@ -1,0 +1,117 @@
+﻿@model FlightPro.Models.PackageModel
+@{
+    ViewData["Title"] = Model.Title;
+    // Calculate duration
+    var duration = (Model.EndDate - Model.StartDate).Days;
+}
+
+<div class="container mt-5">
+
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/Trips">All Trips</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@Model.Destination</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+
+        <div class="col-lg-8">
+
+            <div class="card border-0 shadow-sm mb-4 overflow-hidden rounded-3">
+                <img src="@Model.MainImageUrl" class="img-fluid w-100" style="max-height: 400px; object-fit: cover;" alt="@Model.Title">
+            </div>
+
+            <div class="mb-4">
+                <span class="badge bg-primary mb-2">@Model.Category</span>
+                <h1 class="fw-bold">@Model.Title</h1>
+                <p class="text-muted"><i class="bi bi-geo-alt-fill"></i> @Model.Destination, @Model.Country</p>
+            </div>
+
+            <div class="mb-5">
+                <h4>About this trip</h4>
+                <p class="lead" style="white-space: pre-line;">@Model.Description</p>
+            </div>
+
+            <div class="row text-center mb-5">
+                <div class="col-4">
+                    <div class="p-3 border rounded bg-light">
+                        <i class="bi bi-calendar-check fs-2 text-primary"></i>
+                        <p class="mb-0 mt-2 fw-bold">@Model.StartDate.ToString("MMM dd")</p>
+                        <small class="text-muted">Start Date</small>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="p-3 border rounded bg-light">
+                        <i class="bi bi-clock fs-2 text-primary"></i>
+                        <p class="mb-0 mt-2 fw-bold">@duration Days</p>
+                        <small class="text-muted">Duration</small>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="p-3 border rounded bg-light">
+                        <i class="bi bi-people fs-2 text-primary"></i>
+                        <p class="mb-0 mt-2 fw-bold">@Model.AvailableRooms Rooms</p>
+                        <small class="text-muted">Remaining</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle-fill"></i>
+                <strong>Cancellation Policy:</strong> Free cancellation up to 7 days before the trip.
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow border-0 position-sticky" style="top: 20px;">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <h5 class="text-muted small text-uppercase fw-bold">Price per person</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        @if (Model.DiscountedPrice.HasValue)
+                        {
+                            <span class="text-decoration-line-through text-muted fs-5">$@Model.Price.ToString("N0")</span>
+                            <span class="display-5 fw-bold text-danger">$@Model.DiscountedPrice.Value.ToString("N0")</span>
+                        }
+                        else
+                        {
+                            <span class="display-5 fw-bold text-dark">$@Model.Price.ToString("N0")</span>
+                        }
+                    </div>
+
+                    <hr />
+
+                    <ul class="list-unstyled mb-4">
+                        <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Flight Included</li>
+                        <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>4-Star Hotel</li>
+                        <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Breakfast Daily</li>
+                    </ul>
+
+                    @if (Model.AvailableRooms > 0)
+                    {
+                        <div class="d-grid gap-2">
+                            <a href="/Booking/Book/@Model.Id" class="btn btn-primary btn-lg fw-bold">
+                                Book Now
+                            </a>
+                            <small class="text-center text-muted">No credit card charged yet</small>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-secondary btn-lg" disabled>Sold Out</button>
+                            <a href="/WaitingList/Join/@Model.Id" class="btn btn-warning fw-bold">
+                                <i class="bi bi-bell"></i> Join Waiting List
+                            </a>
+                        </div>
+                    }
+                </div>
+                <div class="card-footer bg-light text-center small text-muted">
+                    Trip ID: #@Model.Id
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
