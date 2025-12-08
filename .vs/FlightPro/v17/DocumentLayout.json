@@ -62,7 +62,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 3,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Bookmark",
@@ -75,6 +75,10 @@
             {
               "$type": "Bookmark",
               "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
             },
             {
               "$type": "Document",
@@ -99,8 +103,7 @@
               "RelativeToolTip": "FlightPro\\Views\\Shared\\_Layout.cshtml",
               "ViewState": "AgIAABIAAAAAAAAAAAAAABYAAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2025-12-08T09:24:16.437Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-08T09:24:16.437Z"
             },
             {
               "$type": "Document",
@@ -112,8 +115,7 @@
               "RelativeToolTip": "FlightPro\\Controllers\\HomeController.cs",
               "ViewState": "AgIAABsAAAAAAAAAAAAYwBgAAABIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-03T11:08:40.075Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-03T11:08:40.075Z"
             },
             {
               "$type": "Document",
@@ -125,8 +127,7 @@
               "RelativeToolTip": "FlightPro\\Controllers\\UserController.cs",
               "ViewState": "AgIAACsAAAAAAAAAAAAAADsAAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-03T11:13:48.59Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-03T11:13:48.59Z"
             },
             {
               "$type": "Document",
@@ -138,8 +139,7 @@
               "RelativeToolTip": "FlightPro\\Views\\Home\\Index.cshtml",
               "ViewState": "AgIAADkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2025-12-03T15:27:54.614Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-03T15:27:54.614Z"
             },
             {
               "$type": "Document",
@@ -151,8 +151,7 @@
               "RelativeToolTip": "FlightPro\\Views\\User\\ViewLogin.cshtml",
               "ViewState": "AgIAAPwAAAAAAAAAAAAiwA8BAABLAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2025-12-03T11:16:32.642Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-03T11:16:32.642Z"
             },
             {
               "$type": "Document",
@@ -164,8 +163,7 @@
               "RelativeToolTip": "FlightPro\\Views\\_ViewStart.cshtml",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2025-12-03T16:30:05.916Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-03T16:30:05.916Z"
             },
             {
               "$type": "Document",
@@ -177,8 +175,7 @@
               "RelativeToolTip": "FlightPro\\Views\\Trips\\PayPage.cshtml",
               "ViewState": "AgIAAAYAAAAAAAAAAAAAAAUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2025-12-08T08:52:51.654Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-08T08:52:51.654Z"
             },
             {
               "$type": "Document",
@@ -190,8 +187,7 @@
               "RelativeToolTip": "FlightPro\\Controllers\\TripsController.cs",
               "ViewState": "AgIAAAgAAAAAAAAAAAAAwA8AAAAbAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-12-03T18:33:41.921Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-03T18:33:41.921Z"
             },
             {
               "$type": "Document",
@@ -203,8 +199,7 @@
               "RelativeToolTip": "FlightPro\\Views\\Trips\\Index.cshtml",
               "ViewState": "AgIAAA8AAAAAAAAAAAAAACgAAABaAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2025-12-03T19:01:38.311Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-03T19:01:38.311Z"
             },
             {
               "$type": "Document",
@@ -216,8 +211,7 @@
               "RelativeToolTip": "FlightPro\\FlightPro.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2025-12-03T14:20:11.144Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-12-03T14:20:11.144Z"
             },
             {
               "$type": "Document",
