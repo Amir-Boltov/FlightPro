@@ -4,107 +4,290 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
 <style>
-    .auth-container {
+    :root {
+        /* צבעים תואמים ל-Navbar (שקיעה וזהב) - מועתק מהלוגין שלך */
+        --nav-orange: #FF8C00;
+        --nav-yellow: #FFC107;
+        --soft-cream: #FFFDF5;
+        --text-muted: #6c757d;
+    }
+
+    .register-page-wrapper {
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 80vh;
-        background-color: #f8f9fa;
+        min-height: 85vh;
+        background-color: #fcfcfc;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     }
 
-    .auth-card {
+    .split-card {
+        display: flex;
+        width: 1000px;
+        max-width: 95%;
         background: white;
-        padding: 40px;
-        border-radius: 12px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        width: 100%;
-        max-width: 450px;
-        text-align: left;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(255, 140, 0, 0.1);
+        overflow: hidden;
+        min-height: 600px;
+        border: 1px solid rgba(255, 193, 7, 0.2);
     }
 
-        .auth-card h2 {
-            text-align: center;
-            margin-bottom: 25px;
-            color: #333;
-        }
+    /* --- צד שמאל: תמונה --- */
+    .left-side {
+        flex: 1;
+        position: relative;
+        /* אפשר לשנות לתמונה אחרת אם רוצים, כרגע זהה ללוגין */
+        background-image: url('/img/picregister.png');
+        background-size: cover;
+        background-position: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        padding: 40px;
+    }
 
-    .form-group {
+    .left-content {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+    }
+
+    .brand-title {
+        font-family: 'Brush Script MT', cursive;
+        font-size: 3.5rem;
         margin-bottom: 15px;
+        color: black;
+        text-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .brand-quote {
+        font-size: 1.1rem;
+        font-weight: 300;
+        opacity: 0.95;
+        color: black;
+    }
+
+    /* --- צד ימין: טופס --- */
+    .right-side {
+        flex: 1;
+        padding: 60px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        background-color: white;
+    }
+
+    .welcome-text {
+        color: var(--nav-orange);
+        font-weight: 800;
+        font-size: 2.2rem;
+        margin-bottom: 8px;
+        text-align: center;
+    }
+
+    .sub-text {
+        text-align: center;
+        color: var(--text-muted);
+        margin-bottom: 35px;
+        font-size: 0.95rem;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #444;
+        margin-bottom: 5px;
+        display: block;
+    }
+
+    /* קלאס חדש כדי לשים שם פרטי ומשפחה באותה שורה */
+    .form-row {
+        display: flex;
+        gap: 15px;
     }
 
     .form-control {
         width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
+        background-color: var(--soft-cream);
+        border: 1px solid #eee;
+        padding: 12px 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        transition: all 0.3s;
     }
 
-    .btn-primary {
-        width: 100%;
-        padding: 12px;
-        background-color: #0d6efd;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        margin-top: 15px;
-        cursor: pointer;
-    }
-
-        .btn-primary:hover {
-            background-color: #0b5ed7;
+        .form-control:focus {
+            border-color: var(--nav-yellow);
+            box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.2);
+            outline: none;
+            background-color: white;
         }
 
-    .error-message {
-        color: #dc3545;
-        background-color: #f8d7da;
-        padding: 10px;
-        margin-bottom: 15px;
-        border-radius: 5px;
+    .btn-register {
+        background: linear-gradient(to right, var(--nav-orange), var(--nav-yellow));
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 10px;
+        font-weight: bold;
+        width: 100%;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: 0.3s ease;
+        box-shadow: 0 4px 15px rgba(255, 140, 0, 0.2);
     }
 
-    .switch-link {
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 140, 0, 0.3);
+        }
+
+    .divider {
+        display: flex;
+        align-items: center;
         text-align: center;
-        margin-top: 20px;
-        font-size: 14px;
+        margin: 25px 0;
+        color: #ccc;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .divider::before {
+            margin-right: 15px;
+        }
+
+        .divider::after {
+            margin-left: 15px;
+        }
+
+    .social-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 35px;
+    }
+
+    .social-btn {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        border: 1px solid #f0f0f0;
+        background: #fafafa;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.2rem;
+        color: #555;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+        .social-btn:hover {
+            border-color: var(--nav-yellow);
+            color: var(--nav-orange);
+            background: white;
+        }
+
+    .login-link {
+        text-align: center;
+        font-size: 0.95rem;
+    }
+
+        .login-link a {
+            color: var(--nav-orange);
+            font-weight: 700;
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            transition: 0.2s;
+        }
+
+            .login-link a:hover {
+                border-bottom: 2px solid var(--nav-yellow);
+            }
+
+    @@media (max-width: 768px) {
+        .left-side {
+            display: none;
+        }
+
+        .split-card {
+            max-width: 450px;
+        }
     }
 </style>
 
-<div class="auth-container">
-    <div class="auth-card">
-        <h2>Create Account</h2>
+<div class="register-page-wrapper">
+    <div class="split-card">
 
-        @if (ViewBag.Error != null)
-        {
-            <div class="error-message">@ViewBag.Error</div>
-        }
+        <div class="left-side">
+            <div class="overlay"></div>
+            <div class="left-content">
+                <div class="brand-title">FlightPro</div>
+                <p class="brand-quote">"To travel is to live. Join us and start your adventure today."</p>
+            </div>
+        </div>
 
-        <form action="/User/Register" method="post">
-            <div class="form-group">
-                <label>First Name</label>
-                <input type="text" name="FirstName" class="form-control" required placeholder="First Name">
+        <div class="right-side">
+            <h2 class="welcome-text">Create Account</h2>
+            <p class="sub-text">Begin your journey with us</p>
+
+            @if (ViewBag.Error != null)
+            {
+                <div style="color: #d9534f; background: #fdf7f7; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px solid #f2dede;">
+                    @ViewBag.Error
+                </div>
+            }
+
+            <form action="/User/Register" method="post">
+
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label>First Name</label>
+                        <input type="text" name="FirstName" class="form-control" required placeholder="First Name">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Last Name</label>
+                        <input type="text" name="LastName" class="form-control" required placeholder="Last Name">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" name="Email" class="form-control" required placeholder="name@example.com">
+                </div>
+
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="Password" class="form-control" required placeholder="Create a password">
+                </div>
+
+                <button type="submit" class="btn-register">SIGN UP</button>
+            </form>
+
+            <div class="divider">or sign up with</div>
+
+            <div class="social-buttons">
+                <div class="social-btn"><i class="fab fa-google"></i></div>
+                <div class="social-btn"><i class="fab fa-facebook-f"></i></div>
+                <div class="social-btn"><i class="fab fa-apple"></i></div>
             </div>
 
-            <div class="form-group">
-                <label>Last Name</label>
-                <input type="text" name="LastName" class="form-control" required placeholder="Last Name">
+            <div class="login-link">
+                Already have an account? <a href="/User/ViewLogin">Login here</a>
             </div>
-
-            <div class="form-group">
-                <label>Email Address</label>
-                <input type="email" name="Email" class="form-control" required placeholder="name@example.com">
-            </div>
-
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" name="Password" class="form-control" required placeholder="Password">
-            </div>
-
-            <button type="submit" class="btn-primary">Sign Up</button>
-        </form>
-
-        <div class="switch-link">
-            Already have an account? <a href="/User/ViewLogin">Login here</a>
         </div>
     </div>
 </div>

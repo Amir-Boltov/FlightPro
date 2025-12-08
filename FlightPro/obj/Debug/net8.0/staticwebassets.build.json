@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "rmpiG2R1tx015UQQ+HYWqzsMDjM5O3dp2WxtGZLhaJY=",
+  "Hash": "5vu1gZ97mDR+q17XG1v47iZGpaV41ZA6otP+VO07nws=",
   "Source": "FlightPro",
   "BasePath": "_content/FlightPro",
   "Mode": "Default",
@@ -141,6 +141,27 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\img\\homepic.png"
+    },
+    {
+      "Identity": "C:\\Users\\Mitchashvim\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\wwwroot\\img\\picregister.png",
+      "SourceId": "FlightPro",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\Users\\Mitchashvim\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\wwwroot\\",
+      "BasePath": "_content/FlightPro",
+      "RelativePath": "img/picregister#[.{fingerprint}]?.png",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "Fingerprint": "0wax5z1ksq",
+      "Integrity": "YFa8HHRSMJx/dPS4Ebng4KITFFx8bytwM0Pd4G/MwNI=",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\img\\picregister.png"
     },
     {
       "Identity": "C:\\Users\\Mitchashvim\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\wwwroot\\js\\site.js",
@@ -1851,6 +1872,88 @@
         {
           "Name": "integrity",
           "Value": "sha256-UTUpLkzbvfIcgOVhyqCziYDIRjjeNjXCVUMcl4EVLcQ="
+        }
+      ]
+    },
+    {
+      "Route": "img/picregister.0wax5z1ksq.png",
+      "AssetFile": "C:\\Users\\Mitchashvim\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\wwwroot\\img\\picregister.png",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "5845923"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/png"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"YFa8HHRSMJx/dPS4Ebng4KITFFx8bytwM0Pd4G/MwNI=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Mon, 08 Dec 2025 09:44:40 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "0wax5z1ksq"
+        },
+        {
+          "Name": "label",
+          "Value": "img/picregister.png"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-YFa8HHRSMJx/dPS4Ebng4KITFFx8bytwM0Pd4G/MwNI="
+        }
+      ]
+    },
+    {
+      "Route": "img/picregister.png",
+      "AssetFile": "C:\\Users\\Mitchashvim\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\wwwroot\\img\\picregister.png",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "5845923"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/png"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"YFa8HHRSMJx/dPS4Ebng4KITFFx8bytwM0Pd4G/MwNI=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Mon, 08 Dec 2025 09:44:40 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=3600, must-revalidate"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-YFa8HHRSMJx/dPS4Ebng4KITFFx8bytwM0Pd4G/MwNI="
         }
       ]
     },

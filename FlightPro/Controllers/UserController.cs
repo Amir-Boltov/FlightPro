@@ -57,7 +57,7 @@ namespace FlightPro.Controllers
                         connection.Open();
                         command.ExecuteNonQuery(); // Execute the INSERT
 
-                        // Success -> Go to Login
+                        // Success go to Login
                         return RedirectToAction("ViewLogin");
                     }
                     catch (SqlException ex)

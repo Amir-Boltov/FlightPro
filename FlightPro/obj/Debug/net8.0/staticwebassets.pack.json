@@ -21,6 +21,10 @@
       "PackagePath": "staticwebassets\\img\\homepic.png"
     },
     {
+      "Id": "C:\\Users\\Mitchashvim\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\wwwroot\\img\\picregister.png",
+      "PackagePath": "staticwebassets\\img\\picregister.png"
+    },
+    {
       "Id": "C:\\Users\\Mitchashvim\\source\\repos\\Amir-Boltov\\FlightPro\\FlightPro\\wwwroot\\js\\site.js",
       "PackagePath": "staticwebassets\\js\\site.js"
     },
