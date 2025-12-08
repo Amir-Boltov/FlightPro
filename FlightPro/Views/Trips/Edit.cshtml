@@ -1,0 +1,54 @@
+﻿@model FlightPro.Models.PackageModel
+
+<div class="container mt-4">
+    <h2>Edit Trip: @Model.Title</h2>
+
+    <form asp-action="Edit" method="post" class="row g-3">
+        <input type="hidden" asp-for="Id" />
+
+        <div class="col-md-6">
+            <label class="form-label">Trip Title</label>
+            <input asp-for="Title" class="form-control" />
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Image URL</label>
+            <input asp-for="MainImageUrl" class="form-control" />
+        </div>
+
+        <div class="col-12">
+            <label class="form-label">Description</label>
+            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Price ($)</label>
+            <input asp-for="Price" class="form-control" />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Discount Price ($)</label>
+            <input asp-for="DiscountedPrice" class="form-control" placeholder="Optional" />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Available Rooms</label>
+            <input asp-for="AvailableRooms" class="form-control" />
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">Start Date</label>
+            <input asp-for="StartDate" type="date" class="form-control" />
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">End Date</label>
+            <input asp-for="EndDate" type="date" class="form-control" />
+        </div>
+
+        <div class="col-12 mt-4">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="/Trips" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
