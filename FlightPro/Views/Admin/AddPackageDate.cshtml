@@ -1,0 +1,46 @@
+﻿@{
+    ViewData["Title"] = "Add Travel Date";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="bi bi-calendar-plus"></i> Add New Schedule</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="AddPackageDate" method="post">
+                        <input type="hidden" name="packageId" value="@ViewBag.PackageId" />
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Start Date</label>
+                            <input type="date" name="startDate" class="form-control" required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">End Date</label>
+                            <input type="date" name="endDate" class="form-control" required />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Price per Person ($)</label>
+                                <input type="number" name="price" class="form-control" min="0" step="0.01" required />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Total Rooms</label>
+                                <input type="number" name="totalRooms" class="form-control" min="1" value="20" required />
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success">Save Schedule</button>
+                            <a asp-action="Packages" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

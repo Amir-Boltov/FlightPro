@@ -1,0 +1,121 @@
+﻿@model FlightPro.Models.UserDetailsViewModel
+
+<div class="container mt-4">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">@TempData["Success"]</div>
+    }
+
+    <a asp-action="Users" class="btn btn-outline-secondary btn-sm mb-3">Back to List</a>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">Profile</div>
+                <div class="card-body">
+                    <form asp-action="UpdateUser" method="post">
+                        <input type="hidden" name="id" value="@Model.Id" />
+
+                        <div class="mb-2">
+                            <label>First Name</label>
+                            <input type="text" name="firstName" class="form-control" value="@Model.FirstName" />
+                        </div>
+                        <div class="mb-2">
+                            <label>Last Name</label>
+                            <input type="text" name="lastName" class="form-control" value="@Model.LastName" />
+                        </div>
+                        <div class="mb-2">
+                            <label>Email</label>
+                            <input type="text" class="form-control" value="@Model.Email" disabled />
+
+                            <input type="hidden" name="email" value="@Model.Email" />
+                        </div>
+                        <div class="mb-3">
+                            <label>Status</label>
+                            <select name="status" class="form-select">
+                                <!option value="Active" @(Model.Status == "Active" ? "selected" : "")>Active</!option>
+                                <!option value="Suspended" @(Model.Status == "Suspended" ? "selected" : "")>Suspended</!option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label>Role</label>
+                            <input type="text" class="form-control" value="@Model.Role" readonly disabled />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Save Changes</button>
+                    </form>
+                    <hr />
+                    <form asp-action="DeleteUser" method="post" onsubmit="return confirm('Delete this user?');">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button type="submit" class="btn btn-danger w-100">Delete Account</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Booking History</h5>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.BookingHistory.Count == 0)
+                    {
+                        <div class="p-5 text-center text-muted">
+                            <i class="bi bi-calendar-x fs-1"></i>
+                            <p class="mt-2">No bookings found for this user.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Package</th>
+                                    <th>Trip Date</th>
+                                    <th>Booked On</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var booking in Model.BookingHistory)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a asp-area=""
+                                               asp-controller="Trips"
+                                               asp-action="Details"
+                                               asp-route-id="@booking.PackageId"
+                                               class="fw-bold text-decoration-none" target="_blank">
+                                                @booking.PackageTitle <i class="bi bi-box-arrow-up-right small"></i>
+                                            </a>
+                                        </td>
+                                        <td>@booking.TripDate.ToString("MMM dd, yyyy")</td>
+
+                                        <td class="small text-muted">
+                                            @booking.BookedAt.ToString("yyyy-MM-dd") <br />
+                                            <span class="text-secondary">@booking.BookedAt.ToString("HH:mm")</span>
+                                        </td>
+
+                                        <td>
+                                            @if (booking.Status == "Confirmed")
+                                            {
+                                                <span class="badge bg-success">Confirmed</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">@booking.Status</span>
+                                            }
+                                        </td>
+                                        <td class="text-end fw-bold">$@booking.PricePaid.ToString("N0")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

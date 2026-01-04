@@ -1,0 +1,11 @@
+﻿namespace FlightPro.Models
+{
+    public class CheckoutViewModel
+    {
+        // הסכום הכולל לתשלום (לתצוגה בלבד)
+        public decimal TotalAmount { get; set; }
+
+        // כמות הפריטים בסל
+        public int ItemCount { get; set; }
+    }
+}

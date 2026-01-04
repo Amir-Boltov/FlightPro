@@ -1,0 +1,58 @@
+﻿@model FlightPro.Models.PackageDateModel
+
+<div class="container mt-5" style="max-width: 600px;">
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <div class="card shadow">
+        <div class="card-header bg-dark text-white">
+            <h4>Edit Schedule Details</h4>
+            <small>@Model.StartDate.ToString("D")</small>
+        </div>
+        <div class="card-body">
+            <form asp-action="EditSchedule" method="post">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <input type="hidden" name="packageId" value="@Model.PackageId" />
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Total Rooms</label>
+                        <input type="number" name="rooms" class="form-control" value="@Model.AvailableRooms" required />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Regular Price ($)</label>
+                        <input type="number" name="price" class="form-control" value="@Model.Price" required />
+                    </div>
+                </div>
+
+                <hr />
+
+                <h5 class="text-danger"><i class="bi bi-tag-fill"></i> Add Discount</h5>
+                <p class="text-muted small">Discounts cannot last longer than 7 days from today.</p>
+
+                <div class="mb-3">
+                    <label class="form-label">Discounted Price ($)</label>
+                    <input type="number" name="discountPrice" class="form-control"
+                           value="@Model.DiscountedPrice" placeholder="Leave empty to remove discount" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Discount Ends On</label>
+                    <input type="date" name="discountEndDate" class="form-control"
+                           value="@(Model.DiscountEndDate?.ToString("yyyy-MM-dd"))"
+                           min="@DateTime.Now.ToString("yyyy-MM-dd")"
+                           max="@DateTime.Now.AddDays(7).ToString("yyyy-MM-dd")" />
+                    <div class="form-text">Must be within the next 7 days.</div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-success">Save Changes</button>
+                    <a asp-action="EditPackage" asp-route-id="@Model.PackageId" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

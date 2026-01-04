@@ -1,0 +1,36 @@
+﻿<div class="container mt-4" style="max-width: 600px;">
+    <h3>Create New User</h3>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form asp-action="CreateUser" method="post">
+                <div class="row mb-3">
+                    <div class="col">
+                        <label class="form-label">First Name</label>
+                        <input type="text" name="firstName" class="form-control" required />
+                    </div>
+                    <div class="col">
+                        <label class="form-label">Last Name</label>
+                        <input type="text" name="lastName" class="form-control" required />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" required />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input type="text" name="password" class="form-control" required />
+                </div>
+
+                <div class="mb-3 form-check">
+                    <input type="checkbox" name="isAdmin" class="form-check-input" id="adminCheck" value="true" />
+                    <label class="form-check-label" for="adminCheck">Grant Admin Role</label>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100">Create User</button>
+            </form>
+        </div>
+    </div>
+</div>

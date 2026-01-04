@@ -1,0 +1,267 @@
+﻿@model List<myBook>
+
+@{
+    ViewData["Title"] = "My Cart";
+    decimal grandTotal = Model.Sum(x => x.TotalPrice ?? 0);
+    int itemCount = Model.Count;
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<style>
+    body {
+        background-color: #f8f9fa;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    /* כרטיס טיסה משודרג */
+    .flight-card {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.03);
+        background: white;
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+        margin-bottom: 24px;
+    }
+
+        .flight-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+
+    .destination-img {
+        height: 100%;
+        min-height: 200px;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    /* עיצוב המחיר */
+    .price-section {
+        background-color: #fcfcfc;
+        border-left: 1px solid #f0f0f0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-end;
+        padding: 20px;
+        height: 100%;
+    }
+
+    .price-tag {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #2c3e50;
+        line-height: 1;
+    }
+
+    .price-breakdown {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 4px;
+    }
+
+    .info-section {
+        padding: 20px;
+    }
+
+    .detail-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        color: #555;
+        font-size: 0.95rem;
+    }
+
+        .detail-item i {
+            width: 25px;
+            text-align: center;
+            margin-right: 8px;
+        }
+
+    /* כרטיס סיכום צדדי */
+    .summary-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        border: none;
+        position: sticky;
+        top: 20px;
+    }
+
+    .btn-checkout {
+        background: #0d6efd;
+        border: none;
+        padding: 14px;
+        border-radius: 10px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+        .btn-checkout:hover {
+            background: #0b5ed7;
+        }
+
+    
+
+    {
+        border-left: none;
+        border-top: 1px solid #f0f0f0;
+        align-items: flex-start;
+        background-color: white;
+    }
+
+    .destination-img {
+        min-height: 180px;
+    }
+
+    }
+</style>
+
+<div class="container py-5">
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="fw-bold text-dark mb-1">Your Shopping Cart</h2>
+            <p class="text-muted">Review your trips before checkout</p>
+        </div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-light text-center py-5 shadow-sm border-0" style="background: white; border-radius: 16px;">
+            <div class="mb-3">
+                <i class="fas fa-suitcase-rolling fa-3x text-muted opacity-50"></i>
+            </div>
+            <h4>Your cart is empty</h4>
+            <p class="text-muted mb-4">Time to start planning your next adventure!</p>
+            <a href="/Trips/Index" class="btn btn-primary px-4 rounded-pill">Explore Trips</a>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-lg-8">
+
+                @foreach (var item in Model)
+                {
+                    // חישובים לוגיים לתצוגה
+                    decimal total = item.TotalPrice ?? 0;
+                    int amount = item.Amount ?? 1;
+                    // חישוב מחיר ליחיד (מונעים חלוקה באפס)
+                    decimal unitPrice = amount > 0 ? total / amount : 0;
+
+                    <div class="flight-card">
+                        <div class="row g-0 h-100">
+
+                            <div class="col-md-3">
+                                <img src="@item.Package.MainImageUrl" class="destination-img" alt="@item.Package.Title">
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="info-section h-100 d-flex flex-column justify-content-center">
+                                    <h4 class="fw-bold mb-3 text-dark">@item.Package.Title</h4>
+
+                                    <div class="detail-item">
+                                        <i class="fas fa-map-marker-alt text-danger"></i>
+                                        <span>@item.Package.Destination</span>
+                                    </div>
+
+                                    <div class="detail-item">
+                                        <i class="far fa-calendar-alt text-primary"></i>
+                                        <span>
+                                            @item.PackageDate.StartDate.ToString("MMM dd") - @item.PackageDate.EndDate.ToString("MMM dd, yyyy")
+                                        </span>
+                                    </div>
+
+                                    <div class="detail-item">
+                                        <i class="fas fa-user-friends text-success"></i>
+                                        <span>@item.Amount Travelers</span>
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <a href="/Trips/Details/@item.PackageId" class="text-decoration-none small fw-bold">
+                                            View Details <i class="fas fa-arrow-right ms-1"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="price-section h-100">
+
+                                    <div class="text-end mb-1">
+                                        <span class="badge bg-light text-dark border mb-2">Flight + Hotel</span>
+                                    </div>
+
+                                    <div class="price-breakdown">
+                                        $@unitPrice.ToString("N0") x @amount
+                                    </div>
+                                    <div class="price-tag text-primary mb-3">
+                                        $@total.ToString("N0")
+                                    </div>
+
+                                    <form asp-controller="MyBook" asp-action="RemoveFromBasket" method="post"
+                                          onsubmit="return confirm('Remove this trip from cart?');" class="w-100 text-end">
+                                        <input type="hidden" name="bookingId" value="@item.Id" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm border-0 rounded-pill px-3">
+                                            <i class="fas fa-trash-alt me-1"></i> Remove
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                }
+
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card summary-card p-4">
+                    <h5 class="fw-bold mb-4">Order Summary</h5>
+
+                    <div class="mb-3">
+                        @foreach (var item in Model)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-2" style="font-size: 0.9rem;">
+                                <div class="text-truncate" style="max-width: 180px;">
+                                    <span class="fw-bold text-dark">@item.Package.Title</span>
+                                    <div class="text-muted small">x @item.Amount travelers</div>
+                                </div>
+                                <span class="text-dark">$@((item.TotalPrice ?? 0).ToString("N0"))</span>
+                            </div>
+                        }
+                    </div>
+
+                    <hr class="my-3">
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Subtotal</span>
+                        <span class="fw-bold">$@grandTotal.ToString("N0")</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-4 align-items-center p-3 bg-light rounded">
+                        <span class="h6 fw-bold text-dark mb-0">Total Due</span>
+                        <span class="h4 fw-bold text-primary mb-0">$@grandTotal.ToString("N0")</span>
+                    </div>
+
+                    <form action="/Order/Checkout" method="get">
+                        <button type="submit" class="btn btn-checkout btn-primary w-100 text-white shadow-sm">
+                            Proceed to Checkout
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <small class="text-muted d-block mb-2">Secure Payment</small>
+                        <div class="text-muted fs-4 opacity-75">
+                            <i class="fab fa-cc-visa mx-1"></i>
+                            <i class="fab fa-cc-mastercard mx-1"></i>
+                            <i class="fab fa-cc-amex mx-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

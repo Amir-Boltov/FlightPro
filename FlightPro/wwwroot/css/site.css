@@ -1,0 +1,67 @@
+.hero-section {
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('/img/homepic.jpeg');
+    background-size: cover;
+    background-position: center;
+    height: 70vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-align: center;
+    border-radius: 0 0 50px 50px;
+    margin-bottom: 3rem;
+}
+
+.trip-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+    .trip-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+    }
+
+    .trip-card img {
+        height: 250px;
+        object-fit: cover;
+    }
+
+.feature-box {
+    padding: 2rem;
+    text-align: center;
+    transition: 0.3s;
+}
+
+    .feature-box:hover {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+    }
+
+.glass-search {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+   
+    .glass-search .form-control,
+    .glass-search .input-group-text {
+        background: transparent !important;
+        border: none;
+        color: white;
+    }
+
+        
+        .glass-search .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        
+        .glass-search .form-control:focus {
+            box-shadow: none;
+            background: transparent;
+        }

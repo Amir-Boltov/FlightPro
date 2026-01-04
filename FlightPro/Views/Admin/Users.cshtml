@@ -1,0 +1,82 @@
+﻿@model List<FlightPro.Models.UserViewModel>
+
+<div class="container-fluid px-4 mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>User Management</h2>
+        <div class="d-flex gap-2">
+            <form method="get" class="d-flex">
+                <input type="text" name="searchQuery" class="form-control me-2"
+                       placeholder="Search name/email..." value="@ViewBag.CurrentSearch">
+                <button type="submit" class="btn btn-outline-primary">Search</button>
+            </form>
+            <a asp-action="CreateUser" class="btn btn-success text-nowrap">Add User</a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Success"] <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Name</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Role</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 fw-bold">@user.FullName</td>
+                            <td>@user.Email</td>
+                            <td>
+                                @if (user.Status == "Active")
+                                {
+                                    <span class="badge bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">@user.Status</span>
+                                }
+                            </td>
+                            <td>
+                                @if (user.Role == "Admin")
+                                {
+                                    <span class="badge bg-primary">Admin</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Customer</span>
+                                }
+                            </td>
+                            <td class="text-end pe-4">
+                                <a asp-action="UserDetails" asp-route-id="@user.Id" class="btn btn-sm btn-outline-primary me-1">Manage</a>
+
+                                <form asp-action="ToggleRole" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@user.Id" />
+                                    @if (user.Role == "Admin")
+                                    {
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Demote to Customer?');">Demote</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="submit" class="btn btn-sm btn-outline-success" onclick="return confirm('Promote to Admin?');">Promote</button>
+                                    }
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

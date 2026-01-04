@@ -1,0 +1,94 @@
+﻿@model IEnumerable<FlightPro.Models.PackageModel>
+@{
+    ViewData["Title"] = "Welcome";
+}
+
+<div class="hero-section">
+    <div class="container">
+        <h1 class="display-3 fw-bold">Find Your Next Adventure</h1>
+        <p class="lead mb-4">Search low fares to destinations around the world.</p>
+
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-8">
+                <form action="/Trips/Index" method="get" class="glass-search p-2 rounded-pill shadow-lg">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-0">
+                            <i class="bi bi-geo-alt text-white"></i>
+                        </span>
+
+                        <input type="text" name="search" class="form-control border-0 text-white"
+                               placeholder="Where to? (e.g. Paris)" aria-label="Search">
+
+                        <button class="btn btn-warning rounded-pill px-4 fw-bold" type="submit">Search</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+
+    <div class="row mb-5">
+        <div class="col-md-4">
+            <div class="feature-box">
+                <i class="bi bi-check-circle-fill text-success fs-1"></i>
+                <h4 class="mt-3">Easy Booking</h4>
+                <p class="text-muted">Book your dream trip in just 3 clicks with our streamlined process.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-box">
+                <i class="bi bi-shield-lock-fill text-primary fs-1"></i>
+                <h4 class="mt-3">Secure Payment</h4>
+                <p class="text-muted">We use top-tier SSL encryption to ensure your data is safe.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-box">
+                <i class="bi bi-globe-americas text-info fs-1"></i>
+                <h4 class="mt-3">Top Destinations</h4>
+                <p class="text-muted">Access to over 25 exclusive locations around the globe.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">🔥 Hot Deals This Week</h2>
+        <a href="/Trips" class="btn btn-outline-dark">View All Trips</a>
+    </div>
+
+    <div class="row">
+        @foreach (var item in Model)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card trip-card h-100 shadow-sm">
+                    <div class="position-relative">
+                        <img src="@item.MainImageUrl" class="card-img-top" alt="@item.Title">
+                        <span class="position-absolute top-0 end-0 bg-danger text-white px-3 py-1 m-2 rounded-pill fw-bold">
+                            SAVE $@((item.DisplayPrice - item.DisplayDiscountedPrice.Value).ToString("0"))
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-uppercase text-muted small mb-1 fw-bold">@item.Destination, @item.Country</p>
+                        <h5 class="card-title fw-bold">@item.Title</h5>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div>
+                                <span class="text-decoration-line-through text-muted">$@item.DisplayPrice.ToString("N0")</span>
+                                <span class="h4 text-primary fw-bold ms-2">$@item.DisplayDiscountedPrice.Value.ToString("N0")</span>
+                            </div>
+                            <a href="/Booking/Details/@item.Id" class="btn btn-primary rounded-pill btn-sm">View Deal</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (!Model.Any())
+        {
+            <div class="col-12 text-center py-5">
+                <p class="text-muted">No hot deals available right now. Check back later!</p>
+            </div>
+        }
+    </div>
+</div>
