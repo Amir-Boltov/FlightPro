@@ -1,4 +1,7 @@
 ﻿@model FlightPro.Models.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Admin Panel";
+}
 
 <div class="container-fluid">
     <div class="row">
@@ -95,11 +98,26 @@
                             <tr>
                                 <td>@item.Id</td>
                                 <td>@item.CreatedAt.ToString("g")</td>
-                                <td>@item.CustFirstName</td>
-                                <td>@item.CustLastName</td>
+
+                                <td>@item.CustFirstName @item.CustLastName</td>
+
                                 <td>@item.PackageTitle</td>
                                 <td>$@item.PricePaid.ToString("N0")</td>
-                                <td><span class="badge bg-success">Confirmed</span></td>
+
+                                <td>
+                                    @if (item.Status == "Canceled")
+                                    {
+                                        <span class="badge bg-danger">Canceled</span>
+                                    }
+                                    else if (item.Status == "InCart")
+                                    {
+                                        <span class="badge bg-warning text-dark">In Cart (Unpaid)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">Confirmed</span>
+                                    }
+                                </td>
                             </tr>
                         }
                     </tbody>

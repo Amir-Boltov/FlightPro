@@ -24,5 +24,7 @@ namespace FlightPro.Models
         public string PackageTitle { get; set; }
         public DateTime CreatedAt { get; set; }
         public decimal PricePaid { get; set; }
+
+        public string Status { get; set; }
     }
 }

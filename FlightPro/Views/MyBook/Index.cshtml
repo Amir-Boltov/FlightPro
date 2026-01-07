@@ -1,4 +1,4 @@
-﻿@model List<myBook>
+﻿@model List<FlightPro.Models.myBook>
 
 @{
     ViewData["Title"] = "My Cart";
@@ -14,7 +14,7 @@
         font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     }
 
-    /* כרטיס טיסה משודרג */
+    /* Enhanced Flight Card */
     .flight-card {
         border: none;
         border-radius: 16px;
@@ -37,7 +37,7 @@
         width: 100%;
     }
 
-    /* עיצוב המחיר */
+    /* Price Section Styling */
     .price-section {
         background-color: #fcfcfc;
         border-left: 1px solid #f0f0f0;
@@ -80,7 +80,45 @@
             margin-right: 8px;
         }
 
-    /* כרטיס סיכום צדדי */
+    /* Timer Badge Styling */
+    .timer-badge {
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 6px;
+        background-color: #e9ecef;
+        color: #495057;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.3s ease;
+    }
+
+        .timer-badge.urgent {
+            background-color: #fee2e2;
+            color: #dc2626;
+            animation: pulse 2s infinite;
+        }
+
+    @* Simple pulse animation for urgent timers *@
+    @("@keyframes") pulse {
+        0%
+
+    {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+
+    100% {
+        opacity: 1;
+    }
+
+    }
+
+    /* Summary Card */
     .summary-card {
         background: white;
         border-radius: 16px;
@@ -102,21 +140,6 @@
         .btn-checkout:hover {
             background: #0b5ed7;
         }
-
-    
-
-    {
-        border-left: none;
-        border-top: 1px solid #f0f0f0;
-        align-items: flex-start;
-        background-color: white;
-    }
-
-    .destination-img {
-        min-height: 180px;
-    }
-
-    }
 </style>
 
 <div class="container py-5">
@@ -146,10 +169,9 @@
 
                 @foreach (var item in Model)
                 {
-                    // חישובים לוגיים לתצוגה
+                    // Calculations
                     decimal total = item.TotalPrice ?? 0;
                     int amount = item.Amount ?? 1;
-                    // חישוב מחיר ליחיד (מונעים חלוקה באפס)
                     decimal unitPrice = amount > 0 ? total / amount : 0;
 
                     <div class="flight-card">
@@ -161,7 +183,20 @@
 
                             <div class="col-md-6">
                                 <div class="info-section h-100 d-flex flex-column justify-content-center">
-                                    <h4 class="fw-bold mb-3 text-dark">@item.Package.Title</h4>
+
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h4 class="fw-bold mb-0 text-dark">@item.Package.Title</h4>
+                                    </div>
+
+                                    @* --- TIMER SECTION START --- *@
+                                    <div class="mb-3">
+                                        <div class="timer-badge" id="timer-box-@item.Id">
+                                            <i class="far fa-clock"></i>
+                                            <span>Expires in:</span>
+                                            <span class="countdown-timer" data-seconds="@item.RemainingSeconds" id="timer-val-@item.Id">Calculating...</span>
+                                        </div>
+                                    </div>
+                                    @* --- TIMER SECTION END --- *@
 
                                     <div class="detail-item">
                                         <i class="fas fa-map-marker-alt text-danger"></i>
@@ -216,6 +251,11 @@
                     </div>
                 }
 
+                <div class="mt-4 mb-5">
+                    <a href="/Trips/Index" class="btn btn-white border shadow-sm rounded-pill px-4 py-2 fw-bold text-muted">
+                        <i class="fas fa-arrow-left me-2"></i> Keep Browsing
+                    </a>
+                </div>
             </div>
 
             <div class="col-lg-4">
@@ -265,3 +305,48 @@
         </div>
     }
 </div>
+
+@* --- JAVASCRIPT FOR TIMER --- *@
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Select all timer elements
+        const timers = document.querySelectorAll('.countdown-timer');
+
+        timers.forEach(timer => {
+            // Get the initial seconds from the data attribute (calculated by C#)
+            let totalSeconds = parseInt(timer.getAttribute('data-seconds'));
+            const timerId = timer.id.replace('timer-val-', ''); // Extract Item ID
+            const badgeElement = document.getElementById('timer-box-' + timerId);
+
+            // Update the display immediately
+            updateDisplay(timer, totalSeconds, badgeElement);
+
+            // Start the interval
+            const interval = setInterval(() => {
+                totalSeconds--;
+
+                if (totalSeconds <= 0) {
+                    clearInterval(interval);
+                    timer.textContent = "Expired";
+                    // Reload page to let backend clean up the item
+                    window.location.reload();
+                } else {
+                    updateDisplay(timer, totalSeconds, badgeElement);
+                }
+            }, 1000);
+        });
+
+        function updateDisplay(element, seconds, badge) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+
+            // Format as MM:SS (e.g., 05:09)
+            element.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+            // Visual Alert: Turn red if less than 2 minutes (120 seconds)
+            if (seconds < 120) {
+                if(badge) badge.classList.add('urgent');
+            }
+        }
+    });
+</script>

@@ -1,4 +1,6 @@
-﻿namespace FlightPro.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace FlightPro.Models
 {
     public class PackageModel
     {
@@ -15,6 +17,11 @@
         public int MinAge { get; set; }
         public string? Country { get; set; }
         public int CancellationDeadlineDays { get; set; }
+
+        [Display(Name = "Cart Hold Time (Minutes)")]
+        [Required]
+        [Range(1, 60, ErrorMessage = "Time must be between 1 and 60 minutes")]
+        public int ExpiryMinutes { get; set; }
 
         // DISPLAY FIELDS ONLY
         public DateTime? DisplayStartDate { get; set; }

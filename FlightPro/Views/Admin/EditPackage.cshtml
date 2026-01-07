@@ -1,4 +1,7 @@
 ﻿@model FlightPro.Models.PackageModel
+@{
+    ViewData["Title"] = "Edit Package " + Model.Id;
+}
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -31,7 +34,7 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-3 mb-3">
                                 <label class="form-label">Category</label>
                                 <select asp-for="Category" class="form-select">
                                     <option>Adventure</option>
@@ -40,13 +43,21 @@
                                     <option>Family</option>
                                 </select>
                             </div>
+
                             <div class="col-md-3 mb-3">
                                 <label class="form-label">Age Limit</label>
                                 <input asp-for="MinAge" class="form-control" type="number" min="0" />
                             </div>
+
                             <div class="col-md-3 mb-3">
                                 <label class="form-label">Cancel Days</label>
                                 <input asp-for="CancellationDeadlineDays" class="form-control" type="number" min="0" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label asp-for="ExpiryMinutes" class="form-label">Cart/WL Hold (Mins)</label>
+                                <input asp-for="ExpiryMinutes" class="form-control" type="number" min="1" />
+                                <span asp-validation-for="ExpiryMinutes" class="text-danger small"></span>
                             </div>
                         </div>
 
@@ -59,24 +70,63 @@
 
                         <h6 class="text-primary mb-3">Image URLs (Max 4)</h6>
 
-                        <div class="mb-3">
+                        <div class="mb-4">
                             <label class="form-label fw-bold">Main Image URL (Required)</label>
-                            <input asp-for="MainImageUrl" class="form-control" placeholder="https://example.com/main.jpg" required />
-                            <div class="form-text small">This image will appear on search cards.</div>
+                            <input asp-for="MainImageUrl" class="form-control mb-2"
+                                   placeholder="https://..." required
+                                   oninput="updatePreview(this, 'previewMain', 'containerMain')" />
+
+                            <div id="containerMain" class="p-2 bg-light border rounded text-center"
+                                 style="display: @(string.IsNullOrEmpty(Model.MainImageUrl) ? "none" : "block");">
+
+                                <img id="previewMain" src="@Model.MainImageUrl"
+                                     class="img-fluid rounded shadow-sm"
+                                     style="max-height: 400px; width: auto;"
+                                     onerror="hideContainer('containerMain')" />
+                            </div>
                         </div>
 
-                        <div class="row g-2">
+                        <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label small">Extra Image 1</label>
-                                <input asp-for="ImageUrl2" class="form-control form-control-sm" placeholder="https://..." />
+                                <input asp-for="ImageUrl2" class="form-control form-control-sm mb-2"
+                                       oninput="updatePreview(this, 'preview2', 'container2')" />
+
+                                <div id="container2" class="p-2 bg-light border rounded text-center"
+                                     style="display: @(string.IsNullOrEmpty(Model.ImageUrl2) ? "none" : "block");">
+                                    <img id="preview2" src="@Model.ImageUrl2"
+                                         class="img-fluid rounded"
+                                         style="max-height: 150px; width: auto;"
+                                         onerror="hideContainer('container2')" />
+                                </div>
                             </div>
+
                             <div class="col-md-4">
                                 <label class="form-label small">Extra Image 2</label>
-                                <input asp-for="ImageUrl3" class="form-control form-control-sm" placeholder="https://..." />
+                                <input asp-for="ImageUrl3" class="form-control form-control-sm mb-2"
+                                       oninput="updatePreview(this, 'preview3', 'container3')" />
+
+                                <div id="container3" class="p-2 bg-light border rounded text-center"
+                                     style="display: @(string.IsNullOrEmpty(Model.ImageUrl3) ? "none" : "block");">
+                                    <img id="preview3" src="@Model.ImageUrl3"
+                                         class="img-fluid rounded"
+                                         style="max-height: 150px; width: auto;"
+                                         onerror="hideContainer('container3')" />
+                                </div>
                             </div>
+
                             <div class="col-md-4">
                                 <label class="form-label small">Extra Image 3</label>
-                                <input asp-for="ImageUrl4" class="form-control form-control-sm" placeholder="https://..." />
+                                <input asp-for="ImageUrl4" class="form-control form-control-sm mb-2"
+                                       oninput="updatePreview(this, 'preview4', 'container4')" />
+
+                                <div id="container4" class="p-2 bg-light border rounded text-center"
+                                     style="display: @(string.IsNullOrEmpty(Model.ImageUrl4) ? "none" : "block");">
+                                    <img id="preview4" src="@Model.ImageUrl4"
+                                         class="img-fluid rounded"
+                                         style="max-height: 150px; width: auto;"
+                                         onerror="hideContainer('container4')" />
+                                </div>
                             </div>
                         </div>
 
@@ -159,3 +209,21 @@
         </div>
     </div>
 </div>
+<script>
+    function updatePreview(input, imgId, containerId) {
+        var img = document.getElementById(imgId);
+        var container = document.getElementById(containerId);
+        var url = input.value;
+
+        if (url) {
+            img.src = url;
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+    }
+
+    function hideContainer(containerId) {
+        document.getElementById(containerId).style.display = 'none';
+    }
+</script>

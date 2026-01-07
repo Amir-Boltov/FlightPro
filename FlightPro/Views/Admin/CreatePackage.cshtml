@@ -1,4 +1,7 @@
 ﻿@model FlightPro.Models.PackageModel
+@{
+    ViewData["Title"] = "Package Creation";
+}
 
 <div class="container mt-4" style="max-width: 800px;">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -9,7 +12,10 @@
     <div class="card shadow-sm">
         <div class="card-body">
             <form asp-action="CreatePackage" method="post">
-                <div asp-validation-summary="All" class="alert alert-danger"></div>
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div asp-validation-summary="All" class="alert alert-danger"></div>
+                }
 
                 <h5 class="text-black mb-3">1. Basic Information</h5>
 
@@ -36,7 +42,7 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-3 mb-3">
                         <label class="form-label fw-bold">Category <span class="text-danger">*</span></label>
                         <select asp-for="Category" class="form-select" required>
                             <option>Adventure</option>
@@ -46,14 +52,23 @@
                             <option>Urban</option>
                         </select>
                     </div>
+
                     <div class="col-md-3 mb-3">
                         <label class="form-label fw-bold">Age Limit <span class="text-danger">*</span></label>
                         <input asp-for="MinAge" class="form-control" required type="number" min="0" value="0" />
                         <div class="form-text">0 for no limit</div>
                     </div>
+
                     <div class="col-md-3 mb-3">
                         <label class="form-label fw-bold">Cancel Days <span class="text-danger">*</span></label>
                         <input asp-for="CancellationDeadlineDays" class="form-control" required type="number" min="0" value="7" />
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label asp-for="ExpiryMinutes" class="form-label fw-bold">Cart/WL Hold <span class="text-danger">*</span></label>
+                        <input asp-for="ExpiryMinutes" class="form-control" required type="number" min="1" value="15" />
+                        <span asp-validation-for="ExpiryMinutes" class="text-danger small"></span>
+                        <div class="form-text">Minutes (Default: 15)</div>
                     </div>
                 </div>
 

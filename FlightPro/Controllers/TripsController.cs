@@ -219,6 +219,29 @@ public class TripsController : Controller
             }
 
             if (package == null) return NotFound();
+            
+            // Fetch extra images if they exist
+            string imgSql = "SELECT TOP 3 Url FROM PackageImages WHERE PackageId = @Id AND IsPrimary = 0 ORDER BY Id";
+
+            using (SqlCommand cmd = new SqlCommand(imgSql, conn))
+            {
+                cmd.Parameters.AddWithValue("@Id", id);
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    int count = 0;
+                    while (reader.Read())
+                    {
+                        string url = reader["Url"].ToString();
+
+                        // Manually map the first 3 extra images to your Model properties
+                        if (count == 0) package.ImageUrl2 = url;
+                        else if (count == 1) package.ImageUrl3 = url;
+                        else if (count == 2) package.ImageUrl4 = url;
+
+                        count++;
+                    }
+                }
+            }
 
             // 2. Fetch all Available Dates (Schedules) for this Package
             string dateSql = @"

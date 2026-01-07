@@ -1,4 +1,7 @@
 ﻿@model FlightPro.Models.UserDetailsViewModel
+@{
+    ViewData["Title"] = "User " + Model.Id;
+}
 
 <div class="container mt-4">
     @if (TempData["Success"] != null)

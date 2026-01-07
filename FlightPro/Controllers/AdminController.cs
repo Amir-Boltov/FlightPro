@@ -50,7 +50,7 @@ namespace FlightPro.Controllers
                     }
                 }
                 string bookingSql = @"
-                    SELECT TOP 10 b.Id, b.CreatedAt, b.TotalPrice, u.FirstName,u.LastName, p.Title
+                    SELECT TOP 10 b.Id, b.CreatedAt, b.TotalPrice, u.FirstName,u.LastName, p.Title, b.Status
                     FROM Bookings b
                     JOIN Users u ON b.UserId = u.Id
                     JOIN PackageDates pd ON b.PackageDateId = pd.Id
@@ -69,7 +69,8 @@ namespace FlightPro.Controllers
                             PricePaid = (decimal)reader["TotalPrice"],
                             CustFirstName = reader["FirstName"].ToString(),
                             CustLastName = reader["LastName"].ToString(),
-                            PackageTitle = reader["Title"].ToString()
+                            PackageTitle = reader["Title"].ToString(),
+                            Status = reader["Status"].ToString()
                         });
                     }
                 }
@@ -159,8 +160,8 @@ namespace FlightPro.Controllers
 
                 // 2. Insert Package (ADDED DestinationId)
                 string sql = @"
-            INSERT INTO Packages (Title, Description, Category, DestinationId, MinAge, CancellationDeadlineDays) 
-            VALUES (@Title, @Desc, @Cat, @DestId, @Age, @Cancel);
+            INSERT INTO Packages (Title, Description, Category, DestinationId, MinAge, CancellationDeadlineDays, ExpiryMinutes) 
+            VALUES (@Title, @Desc, @Cat, @DestId, @Age, @Cancel, @Expiry);
             SELECT CAST(scope_identity() AS int);";
 
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
@@ -168,9 +169,10 @@ namespace FlightPro.Controllers
                     cmd.Parameters.AddWithValue("@Title", model.Title);
                     cmd.Parameters.AddWithValue("@Desc", model.Description);
                     cmd.Parameters.AddWithValue("@Cat", model.Category);
-                    cmd.Parameters.AddWithValue("@DestId", DestinationId); // <--- ADDED
+                    cmd.Parameters.AddWithValue("@DestId", DestinationId); 
                     cmd.Parameters.AddWithValue("@Age", model.MinAge);
                     cmd.Parameters.AddWithValue("@Cancel", model.CancellationDeadlineDays);
+                    cmd.Parameters.AddWithValue("@Expiry", model.ExpiryMinutes);
 
                     newPackageId = (int)cmd.ExecuteScalar();
                 }
@@ -284,7 +286,6 @@ namespace FlightPro.Controllers
         // ==========================================
 
         // GET: Edit Package
-        // GET: Edit Package
         [HttpGet]
         public IActionResult EditPackage(int id)
         {
@@ -312,6 +313,7 @@ namespace FlightPro.Controllers
                                 Category = reader["Category"].ToString(),
                                 MinAge = (int)reader["MinAge"],
                                 CancellationDeadlineDays = (int)reader["CancellationDeadlineDays"],
+                                ExpiryMinutes = (int)reader["ExpiryMinutes"],
                                 // IMPORTANT: Initialize the list so we can add to it later
                                 AvailableSchedules = new List<PackageDateModel>()
                             };
@@ -382,7 +384,7 @@ namespace FlightPro.Controllers
 
                 // 1. Update Basic Info
                 string sql = @"UPDATE Packages 
-                       SET Title=@Title, Description=@Desc, Category=@Cat, MinAge=@Age, CancellationDeadlineDays=@Cancel
+                       SET Title=@Title, Description=@Desc, Category=@Cat, MinAge=@Age, CancellationDeadlineDays=@Cancel, ExpiryMinutes=@Expiry
                        WHERE Id=@Id";
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
@@ -391,7 +393,9 @@ namespace FlightPro.Controllers
                     cmd.Parameters.AddWithValue("@Cat", model.Category);
                     cmd.Parameters.AddWithValue("@Age", model.MinAge);
                     cmd.Parameters.AddWithValue("@Cancel", model.CancellationDeadlineDays);
+                    cmd.Parameters.AddWithValue("@Expiry", model.ExpiryMinutes);
                     cmd.Parameters.AddWithValue("@Id", model.Id);
+
                     cmd.ExecuteNonQuery();
                 }
 

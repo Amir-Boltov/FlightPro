@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>4115f187-4b76-4f45-8640-a2fb1eadf33b</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +14,7 @@
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.3" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="PayPalCheckoutSdk" Version="1.0.4" />
+    <PackageReference Include="QuestPDF" Version="2025.12.1" />
     <PackageReference Include="Stripe.net" Version="50.1.0" />
   </ItemGroup>
 
