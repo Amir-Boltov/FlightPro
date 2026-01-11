@@ -59,9 +59,13 @@
                                     Hello, @userName
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end border-0 shadow" aria-labelledby="userDropdown">
+                                    <li><a class="dropdown-item" href="@Url.Action("Index","WaitingList")">My Profile</a></li>
+                                    <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="@Url.Action("OrderHistory","MyBook")">Bookings</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="@Url.Action("Index","MyBook")">My Cart</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="@Url.Action("Index","WaitingList")">Waiting Lists</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <a class="dropdown-item text-danger" href="@Url.Action("Logout", "User")">Logout</a>

@@ -23,17 +23,25 @@ namespace FlightPro.Controllers
             using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
             {
                 conn.Open();
+
+                // CHANGE 1: Added the subquery to calculate QueuePosition
                 string sql = @"
-            SELECT w.Id, w.RequestedAmount, w.JoinedAt, w.IsNotified,
-                   p.Title, 
-                   d.StartDate, d.EndDate,
-                   img.Url AS MainImageUrl
-            FROM WaitingList w
-            JOIN Packages p ON w.PackageId = p.Id
-            JOIN PackageDates d ON w.PackageDateId = d.Id
-            LEFT JOIN PackageImages img ON p.Id = img.PackageId AND img.IsPrimary = 1
-            WHERE w.UserId = @UserId
-            ORDER BY w.JoinedAt DESC";
+        SELECT w.Id, w.RequestedAmount, w.JoinedAt, w.IsNotified,
+               p.Title, 
+               d.StartDate, d.EndDate,
+               img.Url AS MainImageUrl,
+               (
+                   SELECT COUNT(*) + 1 
+                   FROM WaitingList w2 
+                   WHERE w2.PackageDateId = w.PackageDateId 
+                   AND w2.JoinedAt < w.JoinedAt
+               ) AS QueuePosition
+        FROM WaitingList w
+        JOIN Packages p ON w.PackageId = p.Id
+        JOIN PackageDates d ON w.PackageDateId = d.Id
+        LEFT JOIN PackageImages img ON p.Id = img.PackageId AND img.IsPrimary = 1
+        WHERE w.UserId = @UserId
+        ORDER BY w.JoinedAt DESC";
 
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
@@ -52,7 +60,8 @@ namespace FlightPro.Controllers
                                 EndDate = (DateTime)reader["EndDate"],
                                 RequestedAmount = (int)reader["RequestedAmount"],
                                 JoinedAt = (DateTime)reader["JoinedAt"],
-                                IsNotified = (bool)reader["IsNotified"]
+                                IsNotified = (bool)reader["IsNotified"],
+                                QueuePosition = reader["QueuePosition"] != DBNull.Value ? (int)reader["QueuePosition"] : 0
                             });
                         }
                     }

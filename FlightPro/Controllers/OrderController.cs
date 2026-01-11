@@ -85,7 +85,7 @@ namespace FlightPro.Controllers
                 {
                     // Case B: CART CHECKOUT
                     // We select everything that is currently in the cart.
-                    whereClause = "WHERE b.UserId = @UserId AND b.Status = 'InCart'";
+                    whereClause = "WHERE b.UserId = @UserId AND b.Status IN ('InCart', 'Reserved')";
                 }
 
                 // Combine them

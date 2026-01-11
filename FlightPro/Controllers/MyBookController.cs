@@ -58,7 +58,7 @@ namespace FlightPro.Controllers
             JOIN Packages p ON b.PackageId = p.Id
             JOIN PackageDates pd ON b.PackageDateId = pd.Id
             JOIN Destinations d ON p.DestinationId = d.Id
-            WHERE b.UserId = @UserId AND b.Status = 'InCart'";
+            WHERE b.UserId = @UserId AND b.Status IN ('InCart', 'Reserved')";
 
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
@@ -312,6 +312,7 @@ namespace FlightPro.Controllers
         public IActionResult RemoveFromBasket(int bookingId)
         {
             string connectionString = _configuration.GetConnectionString("myConnect");
+            int dateIdToPromote = 0;
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
@@ -337,6 +338,7 @@ namespace FlightPro.Controllers
                                 }
                             }
                         }
+                        dateIdToPromote = packageDateId;
 
                         // 2. החזרת המלאי
                         if (packageDateId > 0 && amountToReturn > 0)
@@ -363,6 +365,10 @@ namespace FlightPro.Controllers
                     catch
                     {
                         transaction.Rollback();
+                    }
+                    if (dateIdToPromote > 0)
+                    {
+                        TryPromoteFromWaitlist(dateIdToPromote);
                     }
                 }
             }
@@ -448,6 +454,7 @@ namespace FlightPro.Controllers
         {
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
+            int dateIdToPromote = 0;
 
             using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
             {
@@ -485,6 +492,7 @@ namespace FlightPro.Controllers
                                 }
                             }
                         }
+                        dateIdToPromote = packageDateId;
 
                         // 2. Update Status
                         string updateBooking = "UPDATE Bookings SET Status = 'Canceled' WHERE Id = @Id";
@@ -514,6 +522,10 @@ namespace FlightPro.Controllers
                         // Handle error
                     }
                 }
+            }
+            if (dateIdToPromote > 0)
+            {
+                TryPromoteFromWaitlist(dateIdToPromote);
             }
             return RedirectToAction("OrderHistory");
         }
@@ -702,6 +714,7 @@ namespace FlightPro.Controllers
         private void CleanupExpiredCartItems(int userId)
         {
             string connectionString = _configuration.GetConnectionString("myConnect");
+            HashSet<int> dateIdsToCheck = new HashSet<int>();
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
@@ -751,6 +764,7 @@ namespace FlightPro.Controllers
                                 cmdStock.Parameters.AddWithValue("@DateId", item.PackageDateId);
                                 cmdStock.ExecuteNonQuery();
                             }
+                            dateIdsToCheck.Add(item.PackageDateId);
 
                             // B. Delete Booking
                             string deleteSql = "DELETE FROM Bookings WHERE Id = @Id";
@@ -769,6 +783,10 @@ namespace FlightPro.Controllers
                     }
                 }
             }
+            foreach (int dateId in dateIdsToCheck)
+            {
+                TryPromoteFromWaitlist(dateId);
+            }
         }
 
         [HttpPost]
@@ -776,6 +794,7 @@ namespace FlightPro.Controllers
         {
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return Json(new { success = false, message = "Not logged in" });
+            int dateIdToPromote = 0;
 
             string connectionString = _configuration.GetConnectionString("myConnect");
 
@@ -804,7 +823,7 @@ namespace FlightPro.Controllers
                                 }
                             }
                         }
-
+                        dateIdToPromote = packageDateId;
                         // 2. Return Stock
                         if (packageDateId > 0 && amountToReturn > 0)
                         {
@@ -827,7 +846,7 @@ namespace FlightPro.Controllers
                         }
 
                         transaction.Commit();
-                        return Json(new { success = true });
+                        
                     }
                     catch (Exception ex)
                     {
@@ -835,6 +854,12 @@ namespace FlightPro.Controllers
                         return Json(new { success = false, message = ex.Message });
                     }
                 }
+                if (dateIdToPromote > 0)
+                {
+                    TryPromoteFromWaitlist(dateIdToPromote);
+                }
+
+                return Json(new { success = true });
             }
         }
         private void TryPromoteFromWaitlist(int packageDateId)

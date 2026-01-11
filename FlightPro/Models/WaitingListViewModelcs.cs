@@ -10,5 +10,6 @@
         public int RequestedAmount { get; set; }
         public DateTime JoinedAt { get; set; }
         public bool IsNotified { get; set; }
+        public int QueuePosition { get; set; }
     }
 }

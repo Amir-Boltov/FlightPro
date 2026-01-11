@@ -41,7 +41,8 @@
                             <tr>
                                 <td class="ps-4">
                                     <div class="d-flex align-items-center">
-                                        <img src="@item.MainImageUrl" class="rounded-3 me-3"
+                                        <img src="@(string.IsNullOrEmpty(item.MainImageUrl) ? "/images/placeholder.jpg" : item.MainImageUrl)"
+                                             class="rounded-3 me-3"
                                              style="width: 60px; height: 60px; object-fit: cover;" />
                                         <span class="fw-bold text-dark">@item.Title</span>
                                     </div>
@@ -57,6 +58,7 @@
                                 <td>
                                     <small class="text-muted">@item.JoinedAt.ToString("MMM dd, yyyy")</small>
                                 </td>
+
                                 <td>
                                     @if (item.IsNotified)
                                     {
@@ -66,11 +68,21 @@
                                     }
                                     else
                                     {
-                                        <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill">
-                                            <i class="bi bi-hourglass-split me-1"></i> Waiting
-                                        </span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge rounded-pill border shadow-sm px-3 py-2"
+                                                  style="background-color: @(item.QueuePosition == 1 ? "#fff3cd" : "#f8f9fa");
+                                                         color: @(item.QueuePosition == 1 ? "#856404" : "#6c757d");
+                                                         border-color: @(item.QueuePosition == 1 ? "#ffeeba !important" : "#dee2e6 !important");">
+                                                <span class="small opacity-75">#</span><span class="fs-6 fw-bold">@item.QueuePosition</span>
+                                            </span>
+
+                                            <span class="small text-muted">
+                                                @(item.QueuePosition == 1 ? "You're next!" : "in line")
+                                            </span>
+                                        </div>
                                     }
                                 </td>
+
                                 <td class="text-end pe-4">
                                     <form asp-action="Leave" asp-controller="WaitingList" method="post" onsubmit="return confirm('Are you sure you want to leave this waiting list?');">
                                         <input type="hidden" name="id" value="@item.Id" />
