@@ -864,104 +864,129 @@ namespace FlightPro.Controllers
         }
         private void TryPromoteFromWaitlist(int packageDateId)
         {
-            using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
+            string connectionString = _configuration.GetConnectionString("myConnect");
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-
-                // 1. Calculate how many rooms are TRULY available right now
-                // (Assuming you have a View or Logic for this, simplified here:)
-                int totalRooms = 0;
-                int usedRooms = 0;
-
-                // Get Total Capacity
-                string capSql = "SELECT TotalRooms FROM PackageDates WHERE Id = @Id";
-                using (SqlCommand cmd = new SqlCommand(capSql, conn))
+                using (SqlTransaction transaction = conn.BeginTransaction())
                 {
-                    cmd.Parameters.AddWithValue("@Id", packageDateId);
-                    object res = cmd.ExecuteScalar();
-                    if (res != null) totalRooms = (int)res;
-                }
-
-                // Get Used Capacity (Count 'Paid', 'InCart', AND 'Reserved')
-                string usedSql = "SELECT ISNULL(SUM(Amount),0) FROM Bookings WHERE PackageDateId = @Id AND Status IN ('Paid', 'InCart', 'Reserved')";
-                using (SqlCommand cmd = new SqlCommand(usedSql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@Id", packageDateId);
-                    usedRooms = (int)cmd.ExecuteScalar();
-                }
-
-                int availableNow = totalRooms - usedRooms;
-
-                if (availableNow <= 0) return; // No space, stop.
-
-                // 2. Find waiters who fit into the available space
-                // We order by JoinedAt so the first person gets priority (FIFO)
-                string waiterSql = @"
-            SELECT * FROM WaitingList 
-            WHERE PackageDateId = @Id AND IsNotified = 0 
-            ORDER BY JoinedAt ASC";
-
-                var candidates = new List<dynamic>();
-
-                using (SqlCommand cmd = new SqlCommand(waiterSql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@Id", packageDateId);
-                    using (SqlDataReader r = cmd.ExecuteReader())
+                    try
                     {
-                        while (r.Read())
+                        // 1. Check current stock
+                        int currentStock = 0;
+                        string checkStockSql = "SELECT AvailableRooms FROM PackageDates WHERE Id = @DateId";
+                        using (SqlCommand cmdStock = new SqlCommand(checkStockSql, conn, transaction))
                         {
-                            candidates.Add(new
+                            cmdStock.Parameters.AddWithValue("@DateId", packageDateId);
+                            object result = cmdStock.ExecuteScalar();
+                            currentStock = result != DBNull.Value ? (int)result : 0;
+                        }
+
+                        // 2. Find the correct candidate (User B) AND the Price
+                        string findWaitlistSql = @"
+                    SELECT TOP 1 
+                        w.Id, w.UserId, w.PackageId, w.RequestedAmount, 
+                        pd.Price, pd.DiscountedPrice
+                    FROM WaitingList w
+                    JOIN PackageDates pd ON w.PackageDateId = pd.Id
+                    WHERE w.PackageDateId = @DateId 
+                    AND w.RequestedAmount <= @CurrentStock 
+                    ORDER BY w.JoinedAt ASC";
+
+                        int waitlistId = 0;
+                        int userIdToPromote = 0;
+                        int packageId = 0;
+                        int amountNeeded = 0;
+                        decimal finalPerPersonPrice = 0;
+
+                        using (SqlCommand cmdFind = new SqlCommand(findWaitlistSql, conn, transaction))
+                        {
+                            cmdFind.Parameters.AddWithValue("@DateId", packageDateId);
+                            cmdFind.Parameters.AddWithValue("@CurrentStock", currentStock);
+
+                            using (SqlDataReader reader = cmdFind.ExecuteReader())
                             {
-                                Id = (int)r["Id"],
-                                UserId = (int)r["UserId"],
-                                PackageId = (int)r["PackageId"],
-                                ReqAmount = (int)r["RequestedAmount"]
-                            });
+                                if (reader.Read())
+                                {
+                                    waitlistId = (int)reader["Id"];
+                                    userIdToPromote = (int)reader["UserId"]; // <--- IMPORTANT: This is User B
+                                    packageId = (int)reader["PackageId"];
+                                    amountNeeded = (int)reader["RequestedAmount"];
+
+                                    decimal regularPrice = reader["Price"] != DBNull.Value ? Convert.ToDecimal(reader["Price"]) : 0;
+                                    decimal discountPrice = reader["DiscountedPrice"] != DBNull.Value ? Convert.ToDecimal(reader["DiscountedPrice"]) : 0;
+
+                                    // If discount exists and is valid (greater than 0), use it. Otherwise use regular.
+                                    if (discountPrice > 0)
+                                    {
+                                        finalPerPersonPrice = discountPrice;
+                                    }
+                                    else
+                                    {
+                                        finalPerPersonPrice = regularPrice;
+                                    }
+
+                                }
+                            }
+                        }
+
+                        if (waitlistId > 0)
+                        {
+                            // Calculate the total price so it doesn't show as empty/zero in the cart
+                            decimal finalTotalPrice = finalPerPersonPrice * amountNeeded;
+
+                            // 3. Create the Booking
+                            // We use 'Reserved' because your Index action supports it
+                            string createBookingSql = @"
+                        INSERT INTO Bookings (UserId, PackageId, PackageDateId, Amount, TotalPrice, Status, CreatedAt)
+                        VALUES (@UserId, @PackageId, @DateId, @Amount, @TotalPrice, 'Reserved', GETDATE())";
+
+                            using (SqlCommand cmdBook = new SqlCommand(createBookingSql, conn, transaction))
+                            {
+                                // BUG FIX: Use 'userIdToPromote' (User B), NOT the current Session User
+                                cmdBook.Parameters.AddWithValue("@UserId", userIdToPromote);
+
+                                cmdBook.Parameters.AddWithValue("@PackageId", packageId);
+                                cmdBook.Parameters.AddWithValue("@DateId", packageDateId);
+                                cmdBook.Parameters.AddWithValue("@Amount", amountNeeded);
+
+                                // BUG FIX: Insert the calculated TotalPrice
+                                cmdBook.Parameters.AddWithValue("@TotalPrice", finalTotalPrice);
+
+                                cmdBook.ExecuteNonQuery();
+                            }
+
+                            // 4. Decrease Stock (so we don't accidentally create rooms out of thin air)
+                            string reduceStockSql = "UPDATE PackageDates SET AvailableRooms = AvailableRooms - @Amount WHERE Id = @DateId";
+                            using (SqlCommand cmdReduce = new SqlCommand(reduceStockSql, conn, transaction))
+                            {
+                                cmdReduce.Parameters.AddWithValue("@Amount", amountNeeded);
+                                cmdReduce.Parameters.AddWithValue("@DateId", packageDateId);
+                                cmdReduce.ExecuteNonQuery();
+                            }
+
+                            // 5. Remove from Waitlist
+                            string deleteWaitlistSql = "DELETE FROM WaitingList WHERE Id = @Id";
+                            using (SqlCommand cmdDel = new SqlCommand(deleteWaitlistSql, conn, transaction))
+                            {
+                                cmdDel.Parameters.AddWithValue("@Id", waitlistId);
+                                cmdDel.ExecuteNonQuery();
+                            }
+
+                            transaction.Commit();
+                        }
+                        else
+                        {
+                            // No candidate found to fill the spot
+                            transaction.Rollback();
                         }
                     }
-                }
-
-                // 3. Iterate and "Shadow Book"
-                foreach (var waiter in candidates)
-                {
-                    if (waiter.ReqAmount <= availableNow)
+                    catch (Exception ex)
                     {
-                        // A. Create a 'Reserved' Booking (Shadow Booking)
-                        // This physically blocks the slot in the database so no one else can take it.
-                        string bookSql = @"
-                    INSERT INTO Bookings (UserId, PackageId, PackageDateId, Amount, TotalPrice, Status, BookedDate)
-                    SELECT @UserId, @PackageId, @PackageDateId, @Amount, (Price * @Amount), 'Reserved', GETDATE()
-                    FROM PackageDates WHERE Id = @PackageDateId";
-
-                        using (SqlCommand bookCmd = new SqlCommand(bookSql, conn))
-                        {
-                            bookCmd.Parameters.AddWithValue("@UserId", waiter.UserId);
-                            bookCmd.Parameters.AddWithValue("@PackageId", waiter.PackageId);
-                            bookCmd.Parameters.AddWithValue("@PackageDateId", packageDateId);
-                            bookCmd.Parameters.AddWithValue("@Amount", waiter.ReqAmount);
-                            bookCmd.ExecuteNonQuery();
-                        }
-
-                        // B. Update Waitlist Status (Mark as Notified)
-                        // We give them 24 hours to accept.
-                        string updateWl = @"
-                    UPDATE WaitingList 
-                    SET IsNotified = 1, NotificationExpiresAt = DATEADD(hour, 24, GETDATE())
-                    WHERE Id = @WlId";
-
-                        using (SqlCommand upCmd = new SqlCommand(updateWl, conn))
-                        {
-                            upCmd.Parameters.AddWithValue("@WlId", waiter.Id);
-                            upCmd.ExecuteNonQuery();
-                        }
-
-                        // C. Decrease local counter so we don't overbook the next person in this loop
-                        availableNow -= waiter.ReqAmount;
-
-                        // TODO: Send Email here ("Good news! A spot opened up...")
+                        transaction.Rollback();
+                        System.Diagnostics.Debug.WriteLine("PROMOTION ERROR: " + ex.Message);
                     }
-
-                    if (availableNow <= 0) break;
                 }
             }
         }
