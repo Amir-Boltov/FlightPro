@@ -4,13 +4,13 @@ using Microsoft.Extensions.Configuration;
 using FlightPro.Models;
 using System.Threading.Tasks;
 using System;
+using System.Collections.Generic;
 
 namespace FlightPro.Controllers
 {
     public class OrderController : Controller
     {
         private readonly IConfiguration _configuration;
-        // Assuming you have these services registered in Program.cs
         private readonly PayPalService _payPalService;
         private readonly StripeService _stripeService;
 
@@ -30,79 +30,129 @@ namespace FlightPro.Controllers
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
 
-            // 1. Create a specific booking with status 'PendingDirect'.
-            //    This isolates it from the 'InCart' items.
+            // 1. Create Booking AND Deduct Stock
             int bookingId = CreateDirectBooking(userId.Value, packageId, packageDateId, amount);
 
             if (bookingId == 0)
             {
-                // Handle error (e.g., date not found)
-                return RedirectToAction("Index", "Trips");
+                // Likely means sold out or error
+                TempData["Error"] = "Could not reserve this trip. It may be sold out.";
+                return RedirectToAction("Index", "Trips"); // Or wherever you list trips
             }
 
-            // 2. Redirect to Checkout, passing the specific Booking ID
-            return RedirectToAction("Checkout", new { directBookingId = bookingId });
+            // 2. Go to Checkout with this specific ID
+            return RedirectToAction("Checkout", new { bookingId = bookingId });
         }
 
         // ==========================================
         //              2. UNIFIED CHECKOUT
         // ==========================================
-        [HttpGet]
-        public IActionResult Checkout(int? directBookingId)
+        // GET: Order/Checkout
+        // GET: Order/Checkout
+        public IActionResult Checkout(int? bookingId)
         {
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
 
-            decimal totalAmount = 0;
-            int itemCount = 0;
+            List<myBook> cartItems = new List<myBook>();
+            decimal grandTotal = 0;
 
-            if (directBookingId.HasValue && directBookingId.Value > 0)
+            using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
             {
-                // -- PATH A: Direct Buy Now --
-                // Only fetch the total for this specific booking
-                totalAmount = GetBookingTotal(directBookingId.Value, userId.Value);
-                itemCount = 1;
+                conn.Open();
+
+                // 1. Base query structure (Joins are the same for both cases)
+                string baseSql = @"
+            SELECT b.Id, b.Amount, b.TotalPrice, 
+                   p.Title,
+                   img.Url AS MainImageUrl,
+                   d.StartDate, d.EndDate
+            FROM Bookings b
+            JOIN Packages p ON b.PackageId = p.Id
+            JOIN PackageDates d ON b.PackageDateId = d.Id
+            LEFT JOIN PackageImages img ON p.Id = img.PackageId AND img.IsPrimary = 1 ";
+
+                string whereClause = "";
+
+                // 2. C# DECIDES THE FILTER (Much safer than SQL logic)
+                if (bookingId.HasValue && bookingId.Value > 0)
+                {
+                    // Case A: BUY NOW (Specific Item)
+                    // We select by ID strictly. We don't care about status here.
+                    whereClause = "WHERE b.UserId = @UserId AND b.Id = @SpecificId";
+                }
+                else
+                {
+                    // Case B: CART CHECKOUT
+                    // We select everything that is currently in the cart.
+                    whereClause = "WHERE b.UserId = @UserId AND b.Status = 'InCart'";
+                }
+
+                // Combine them
+                string finalSql = baseSql + whereClause;
+
+                using (SqlCommand cmd = new SqlCommand(finalSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+
+                    // Only add this parameter if we are in "Buy Now" mode
+                    if (bookingId.HasValue && bookingId.Value > 0)
+                    {
+                        cmd.Parameters.AddWithValue("@SpecificId", bookingId.Value);
+                    }
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var item = new myBook
+                            {
+                                Id = (int)reader["Id"],
+                                Amount = (int)reader["Amount"],
+                                TotalPrice = (decimal)reader["TotalPrice"],
+                                Package = new PackageModel
+                                {
+                                    Title = reader["Title"].ToString(),
+                                    MainImageUrl = reader["MainImageUrl"] != DBNull.Value ? reader["MainImageUrl"].ToString() : "/images/default.jpg"
+                                },
+                                PackageDate = new PackageDateModel
+                                {
+                                    StartDate = (DateTime)reader["StartDate"],
+                                    EndDate = (DateTime)reader["EndDate"]
+                                }
+                            };
+                            cartItems.Add(item);
+                            grandTotal += item.TotalPrice ?? 0;
+                        }
+                    }
+                }
             }
-            else
-            {
-                // -- PATH B: Standard Shopping Cart --
-                // Only fetch items strictly marked as 'InCart'
-                totalAmount = GetCartTotal(userId.Value);
-                itemCount = GetItemCount(userId.Value);
-            }
 
-            // If nothing to pay, go back
-            if (totalAmount == 0) return RedirectToAction("Index", "MyBook");
-
-            var model = new CheckoutViewModel
+            var viewModel = new CheckoutViewModel
             {
-                TotalAmount = totalAmount,
-                ItemCount = itemCount,
-                DirectBookingId = directBookingId // Important: View must submit this back
+                Items = cartItems,
+                TotalAmount = grandTotal,
+                ItemCount = cartItems.Count,
+                DirectBookingId = bookingId
             };
 
-            return View(model);
+            return View(viewModel);
         }
 
         // ==========================================
         //              3. PAYPAL FLOW
         // ==========================================
         [HttpPost]
-        public async Task<IActionResult> PayWithPayPal(int? directBookingId)
+        public async Task<IActionResult> PayWithPayPal(int? bookingId)
         {
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
 
-            // Determine amount based on whether we are paying for a specific ID or the whole cart
-            decimal totalAmount = (directBookingId.HasValue && directBookingId.Value > 0)
-                ? GetBookingTotal(directBookingId.Value, userId.Value)
-                : GetCartTotal(userId.Value);
-
+            decimal totalAmount = GetTotalAmount(userId.Value, bookingId);
             if (totalAmount == 0) return RedirectToAction("Index", "MyBook");
 
-            // Pass the ID in the ReturnURL so we don't lose context after PayPal redirects back
-            string returnUrl = Url.Action("PayPalCallback", "Order", new { directBookingId = directBookingId }, Request.Scheme);
-            string cancelUrl = Url.Action("Checkout", "Order", new { directBookingId = directBookingId }, Request.Scheme);
+            string returnUrl = Url.Action("PayPalCallback", "Order", new { bookingId = bookingId }, Request.Scheme);
+            string cancelUrl = Url.Action("Checkout", "Order", new { bookingId = bookingId }, Request.Scheme);
 
             try
             {
@@ -111,12 +161,11 @@ namespace FlightPro.Controllers
             }
             catch (Exception)
             {
-                // Log error
-                return RedirectToAction("Checkout", new { directBookingId = directBookingId });
+                return RedirectToAction("Checkout", new { bookingId = bookingId });
             }
         }
 
-        public async Task<IActionResult> PayPalCallback(string token, int? directBookingId)
+        public async Task<IActionResult> PayPalCallback(string token, int? bookingId)
         {
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
@@ -125,85 +174,52 @@ namespace FlightPro.Controllers
 
             if (!string.IsNullOrEmpty(transactionId))
             {
-                if (directBookingId.HasValue && directBookingId.Value > 0)
-                {
-                    // PATH A: Mark ONLY the direct booking as paid
-                    MarkBookingAsPaid(directBookingId.Value, transactionId, "PayPal");
-                }
-                else
-                {
-                    // PATH B: Mark ALL 'InCart' items as paid
-                    MarkOrderAsPaid(userId.Value, transactionId, "PayPal");
-                }
+                // ONE method handles both cases now
+                MarkAsPaid(userId.Value, transactionId, bookingId);
                 return RedirectToAction("Success");
             }
 
-            // If capture failed, go back to checkout
-            return RedirectToAction("Checkout", new { directBookingId = directBookingId });
+            return RedirectToAction("Checkout", new { bookingId = bookingId });
         }
 
         // ==========================================
         //              4. STRIPE FLOW
         // ==========================================
         [HttpPost]
-        public IActionResult PayWithStripe(int? directBookingId)
+        public IActionResult PayWithStripe(int? bookingId)
         {
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
 
-            decimal totalAmount = (directBookingId.HasValue && directBookingId.Value > 0)
-                ? GetBookingTotal(directBookingId.Value, userId.Value)
-                : GetCartTotal(userId.Value);
-
+            decimal totalAmount = GetTotalAmount(userId.Value, bookingId);
             if (totalAmount == 0) return RedirectToAction("Index", "MyBook");
 
-            // 1. Create the base URL (This might already contain a '?' if directBookingId is present)
-            string returnUrl = Url.Action("StripeCallback", "Order", new { directBookingId = directBookingId }, Request.Scheme);
+            string returnUrl = Url.Action("StripeCallback", "Order", new { bookingId = bookingId }, Request.Scheme);
 
-            // 2. FIX: Smartly append the Stripe ID placeholder
-            // If the URL already has a '?', we must use '&'
-            if (returnUrl.Contains("?"))
-            {
-                returnUrl += "&session_id={CHECKOUT_SESSION_ID}";
-            }
-            else
-            {
-                returnUrl += "?session_id={CHECKOUT_SESSION_ID}";
-            }
+            // Fix URL formatting
+            returnUrl += returnUrl.Contains("?") ? "&session_id={CHECKOUT_SESSION_ID}" : "?session_id={CHECKOUT_SESSION_ID}";
 
-            string cancelUrl = Url.Action("Checkout", "Order", new { directBookingId = directBookingId }, Request.Scheme);
+            string cancelUrl = Url.Action("Checkout", "Order", new { bookingId = bookingId }, Request.Scheme);
 
             string paymentUrl = _stripeService.CreateCheckoutSession(totalAmount, returnUrl, cancelUrl);
 
             return Redirect(paymentUrl);
         }
 
-        public IActionResult StripeCallback(string session_id, int? directBookingId)
+        public IActionResult StripeCallback(string session_id, int? bookingId)
         {
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
 
             if (string.IsNullOrEmpty(session_id))
             {
-                return RedirectToAction("Checkout", new { directBookingId = directBookingId });
+                return RedirectToAction("Checkout", new { bookingId = bookingId });
             }
 
-            // FIX: Clean the ID. 
-            // If session_id comes in as "cs_test_123?session_id=cs_test_123", this splits it and takes only the first part.
-            string cleanTxId = session_id;
-            if (cleanTxId.Contains("?"))
-            {
-                cleanTxId = cleanTxId.Split('?')[0];
-            }
+            string cleanTxId = session_id.Contains("?") ? session_id.Split('?')[0] : session_id;
 
-            if (directBookingId.HasValue && directBookingId.Value > 0)
-            {
-                MarkBookingAsPaid(directBookingId.Value, cleanTxId, "Credit Card");
-            }
-            else
-            {
-                MarkOrderAsPaid(userId.Value, cleanTxId, "Credit Card");
-            }
+            // ONE method handles both cases now
+            MarkAsPaid(userId.Value, cleanTxId, bookingId);
 
             return RedirectToAction("Success");
         }
@@ -214,167 +230,131 @@ namespace FlightPro.Controllers
         }
 
         // ==========================================
-        //           5. SQL HELPER METHODS
+        //           5. SMART SQL HELPERS
         // ==========================================
 
-        private string GetConnString()
+        private decimal GetTotalAmount(int userId, int? bookingId)
         {
-            return _configuration.GetConnectionString("myConnect");
-        }
-
-        // --- CART HELPERS ---
-
-        private decimal GetCartTotal(int userId)
-        {
-            decimal total = 0;
-            using (SqlConnection conn = new SqlConnection(GetConnString()))
+            using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
             {
                 conn.Open();
-                // STRICTLY filter by 'InCart' so we don't accidentally pay for PendingDirect items
-                string sql = "SELECT SUM(TotalPrice) FROM Bookings WHERE UserId = @UserId AND Status = 'InCart'";
+                string sql;
+
+                if (bookingId.HasValue && bookingId.Value > 0)
+                {
+                    // Case A: Single Item
+                    sql = "SELECT TotalPrice FROM Bookings WHERE Id = @Id AND UserId = @UserId";
+                }
+                else
+                {
+                    // Case B: Full Cart
+                    sql = "SELECT SUM(TotalPrice) FROM Bookings WHERE UserId = @UserId AND Status = 'InCart'";
+                }
+
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@UserId", userId);
+                    if (bookingId.HasValue) cmd.Parameters.AddWithValue("@Id", bookingId.Value);
+
                     object result = cmd.ExecuteScalar();
-                    if (result != DBNull.Value && result != null) total = (decimal)result;
-                }
-            }
-            return total;
-        }
-
-        private int GetItemCount(int userId)
-        {
-            int count = 0;
-            using (SqlConnection conn = new SqlConnection(GetConnString()))
-            {
-                conn.Open();
-                string sql = "SELECT COUNT(*) FROM Bookings WHERE UserId = @UserId AND Status = 'InCart'";
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@UserId", userId);
-                    count = (int)cmd.ExecuteScalar();
-                }
-            }
-            return count;
-        }
-
-        private void MarkOrderAsPaid(int userId, string txId, string method)
-        {
-            using (SqlConnection conn = new SqlConnection(GetConnString()))
-            {
-                conn.Open();
-                string sql = @"UPDATE Bookings 
-                       SET IsPaid = 1, Status = 'Confirmed', TransactionId = @TxId, CreatedAt = GETDATE() 
-                       WHERE UserId = @UserId AND Status = 'InCart'";
-
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@UserId", userId);
-                    // Fix: Handle null explicitly
-                    cmd.Parameters.AddWithValue("@TxId", (object)txId ?? DBNull.Value);
-                    cmd.ExecuteNonQuery();
+                    return result != null && result != DBNull.Value ? (decimal)result : 0;
                 }
             }
         }
-
-        // --- DIRECT BOOKING HELPERS ---
 
         private int CreateDirectBooking(int userId, int packageId, int dateId, int amount)
         {
             int newId = 0;
-            using (SqlConnection conn = new SqlConnection(GetConnString()))
+            using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
             {
                 conn.Open();
-                // We use 'PendingDirect' status.
-                // This is the key to separating it from the Cart.
-                string sql = @"
-                    INSERT INTO Bookings (UserId, PackageId, PackageDateId, Amount, TotalPrice, Status, CreatedAt, IsPaid)
-                    OUTPUT INSERTED.Id
-                    SELECT @UserId, @PkgId, @DateId, @Amount, (p.Price * @Amount), 'PendingDirect', GETDATE(), 0
-                    FROM PackageDates p
-                    WHERE p.Id = @DateId";
-
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SqlTransaction transaction = conn.BeginTransaction())
                 {
-                    cmd.Parameters.AddWithValue("@UserId", userId);
-                    cmd.Parameters.AddWithValue("@PkgId", packageId);
-                    cmd.Parameters.AddWithValue("@DateId", dateId);
-                    cmd.Parameters.AddWithValue("@Amount", amount);
+                    try
+                    {
+                        // 1. CHECK STOCK FIRST
+                        string checkStockSql = "SELECT AvailableRooms, Price FROM PackageDates WHERE Id = @DateId";
+                        int available = 0;
+                        decimal price = 0;
 
-                    object result = cmd.ExecuteScalar();
-                    if (result != null) newId = (int)result;
+                        using (SqlCommand checkCmd = new SqlCommand(checkStockSql, conn, transaction))
+                        {
+                            checkCmd.Parameters.AddWithValue("@DateId", dateId);
+                            using (SqlDataReader r = checkCmd.ExecuteReader())
+                            {
+                                if (r.Read())
+                                {
+                                    available = (int)r["AvailableRooms"];
+                                    price = (decimal)r["Price"];
+                                }
+                            }
+                        }
+
+                        if (available < amount) return 0; // Sold out
+
+                        // 2. DEDUCT STOCK (Important!)
+                        string updateStockSql = "UPDATE PackageDates SET AvailableRooms = AvailableRooms - @Amount WHERE Id = @DateId";
+                        using (SqlCommand stockCmd = new SqlCommand(updateStockSql, conn, transaction))
+                        {
+                            stockCmd.Parameters.AddWithValue("@Amount", amount);
+                            stockCmd.Parameters.AddWithValue("@DateId", dateId);
+                            stockCmd.ExecuteNonQuery();
+                        }
+
+                        // 3. CREATE BOOKING
+                        string insertSql = @"
+                            INSERT INTO Bookings (UserId, PackageId, PackageDateId, Amount, TotalPrice, Status, CreatedAt, IsPaid)
+                            OUTPUT INSERTED.Id
+                            VALUES (@UserId, @PkgId, @DateId, @Amount, @Total, 'PendingDirect', GETDATE(), 0)";
+
+                        using (SqlCommand insertCmd = new SqlCommand(insertSql, conn, transaction))
+                        {
+                            insertCmd.Parameters.AddWithValue("@UserId", userId);
+                            insertCmd.Parameters.AddWithValue("@PkgId", packageId);
+                            insertCmd.Parameters.AddWithValue("@DateId", dateId);
+                            insertCmd.Parameters.AddWithValue("@Amount", amount);
+                            insertCmd.Parameters.AddWithValue("@Total", price * amount); // Or logic for discount
+
+                            newId = (int)insertCmd.ExecuteScalar();
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        return 0;
+                    }
                 }
             }
             return newId;
         }
 
-        private decimal GetBookingTotal(int bookingId, int userId)
+        private void MarkAsPaid(int userId, string txId, int? specificBookingId)
         {
-            decimal total = 0;
-            using (SqlConnection conn = new SqlConnection(GetConnString()))
+            using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
             {
                 conn.Open();
-                // Get price for the specific single booking
-                string sql = "SELECT TotalPrice FROM Bookings WHERE Id = @Id AND UserId = @UserId";
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@Id", bookingId);
-                    cmd.Parameters.AddWithValue("@UserId", userId);
-                    object result = cmd.ExecuteScalar();
-                    if (result != DBNull.Value && result != null) total = (decimal)result;
-                }
-            }
-            return total;
-        }
-
-        private void MarkBookingAsPaid(int bookingId, string txId, string method)
-        {
-            using (SqlConnection conn = new SqlConnection(GetConnString()))
-            {
-                conn.Open();
-
-                // We use a transaction to ensure stock is only deducted if the status update succeeds
-                using (SqlTransaction transaction = conn.BeginTransaction())
-                {
-                    try
-                    {
-                        // Step A: Mark the booking as paid
-                        string updateBookingSql = @"
+                string sql = @"
                     UPDATE Bookings 
                     SET IsPaid = 1, 
                         Status = 'Confirmed', 
-                        TransactionId = @TxId 
-                    WHERE Id = @Id";
+                        TransactionId = @TxId, 
+                        CreatedAt = GETDATE() 
+                    WHERE UserId = @UserId 
+                    AND (
+                        (@SpecificId IS NOT NULL AND Id = @SpecificId)
+                        OR 
+                        (@SpecificId IS NULL AND Status = 'InCart')
+                    )";
 
-                        using (SqlCommand cmd = new SqlCommand(updateBookingSql, conn, transaction))
-                        {
-                            cmd.Parameters.AddWithValue("@Id", bookingId);
-                            cmd.Parameters.AddWithValue("@TxId", (object)txId ?? DBNull.Value);
-                            cmd.ExecuteNonQuery();
-                        }
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    cmd.Parameters.AddWithValue("@TxId", txId ?? "N/A");
+                    cmd.Parameters.AddWithValue("@SpecificId", specificBookingId.HasValue ? (object)specificBookingId.Value : DBNull.Value);
 
-                        // Step B: Deduct the spots from PackageDates
-                        // This query finds the specific PackageDate for this booking and subtracts the Booking's Amount
-                        string updateStockSql = @"
-                    UPDATE P
-                    SET P.AvailableRooms = P.AvailableRooms - B.Amount
-                    FROM PackageDates P
-                    INNER JOIN Bookings B ON P.Id = B.PackageDateId
-                    WHERE B.Id = @Id";
-
-                        using (SqlCommand cmd = new SqlCommand(updateStockSql, conn, transaction))
-                        {
-                            cmd.Parameters.AddWithValue("@Id", bookingId);
-                            cmd.ExecuteNonQuery();
-                        }
-
-                        transaction.Commit();
-                    }
-                    catch (Exception)
-                    {
-                        transaction.Rollback();
-                        throw; // Re-throw the error so we know something went wrong
-                    }
+                    cmd.ExecuteNonQuery();
                 }
             }
         }

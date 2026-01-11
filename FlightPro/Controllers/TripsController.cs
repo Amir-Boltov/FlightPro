@@ -212,7 +212,7 @@ public class TripsController : Controller
                             Destination = reader["CityName"].ToString(),
                             Country = reader["CountryName"].ToString(),
                             MainImageUrl = reader["MainImageUrl"] != DBNull.Value ? reader["MainImageUrl"].ToString() : "/img/default.jpg",
-                            AvailableSchedules = new List<PackageDateModel>() // Initialize list
+                            AvailableSchedules = new List<PackageDateModel>()
                         };
                     }
                 }

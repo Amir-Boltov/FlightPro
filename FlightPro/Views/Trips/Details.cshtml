@@ -5,135 +5,131 @@
 }
 
 <style>
-    /* --- עיצוב כללי ורקע --- */
+    /* --- Your Existing Styles (Unchanged) --- */
     body {
-    background-color: #f9fafb;
+        background-color: #f9fafb;
     }
 
-    /* --- עיצוב כרטיס התאריכים (למטה) --- */
     .dates-card {
-    border: none;
-    border-radius: 24px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.06);
-    background-color: #fff;
-    overflow: hidden;
+        border: none;
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.06);
+        background-color: #fff;
+        overflow: hidden;
     }
 
     .dates-header {
-    background: #fff;
-    padding: 40px 20px 20px 20px;
-    text-align: center; /* מרכוז הכותרת התחתונה */
+        background: #fff;
+        padding: 40px 20px 20px 20px;
+        text-align: center;
     }
 
-    /* --- עיצוב הטבלה המודרנית --- */
     .booking-table {
-    border-collapse: separate;
-    border-spacing: 0 15px;
-    width: 100%;
-    margin-top: 10px;
+        border-collapse: separate;
+        border-spacing: 0 15px;
+        width: 100%;
+        margin-top: 10px;
     }
 
-    .booking-table tbody tr {
-    background-color: #fff;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-    }
+        .booking-table tbody tr {
+            background-color: #fff;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        }
 
-    .booking-table tbody tr:hover {
-    transform: scale(1.01);
-    box-shadow: 0 15px 30px rgba(0,0,0,0.1);
-    z-index: 10;
-    position: relative;
-    }
+            .booking-table tbody tr:hover {
+                transform: scale(1.01);
+                box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+                z-index: 10;
+                position: relative;
+            }
 
-    .booking-table td {
-    padding: 25px;
-    vertical-align: middle;
-    border-top: 1px solid #f3f4f6;
-    border-bottom: 1px solid #f3f4f6;
-    }
+        .booking-table td {
+            padding: 25px;
+            vertical-align: middle;
+            border-top: 1px solid #f3f4f6;
+            border-bottom: 1px solid #f3f4f6;
+        }
 
-    .booking-table td:first-child {
-    border-left: 1px solid #f3f4f6;
-    border-top-left-radius: 16px;
-    border-bottom-left-radius: 16px;
-    }
+            .booking-table td:first-child {
+                border-left: 1px solid #f3f4f6;
+                border-top-left-radius: 16px;
+                border-bottom-left-radius: 16px;
+            }
 
-    .booking-table td:last-child {
-    border-right: 1px solid #f3f4f6;
-    border-top-right-radius: 16px;
-    border-bottom-right-radius: 16px;
-    }
+            .booking-table td:last-child {
+                border-right: 1px solid #f3f4f6;
+                border-top-right-radius: 16px;
+                border-bottom-right-radius: 16px;
+            }
 
-    /* --- אלמנטים בתוך הטבלה --- */
     .date-box {
-    display: flex;
-    align-items: center;
-    gap: 15px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
     }
 
     .date-icon {
-    width: 55px;
-    height: 55px;
-    background: #eff6ff;
-    color: #3b82f6;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.3rem;
+        width: 55px;
+        height: 55px;
+        background: #eff6ff;
+        color: #3b82f6;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
     }
 
     .price-display {
-    font-size: 1.4rem;
-    font-weight: 800;
-    color: #1f2937;
-    letter-spacing: -0.5px;
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #1f2937;
+        letter-spacing: -0.5px;
     }
 
-    /* --- כפתורים ואינפוטים --- */
     .action-group {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: flex-end;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: flex-end;
     }
 
     .traveler-input {
-    width: 70px;
-    text-align: center;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 10px;
-    font-weight: 600;
-    transition: 0.2s;
+        width: 70px;
+        text-align: center;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 10px;
+        font-weight: 600;
+        transition: 0.2s;
     }
 
-    .traveler-input:focus {
-    border-color: #3b82f6;
-    outline: none;
-    }
+        .traveler-input:focus {
+            border-color: #3b82f6;
+            outline: none;
+        }
 
     .btn-book {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    color: white;
-    border: none;
-    padding: 12px 30px;
-    border-radius: 12px;
-    font-weight: 600;
-    transition: 0.3s;
-    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: 0.3s;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
     }
 
     .btn-buy-now {
         background: #fff;
         color: #2563eb;
-        border: 2px solid #2563eb; /* Matches the blue of btn-book */
-        padding: 10px 20px; /* Slightly less padding to account for border */
+        border: 2px solid #2563eb;
+        padding: 10px 20px;
         border-radius: 12px;
         font-weight: 700;
         transition: 0.3s;
-        height: 100%; /* Ensures same height as other button */
+        height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -147,78 +143,74 @@
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
         }
 
-    /* Helper to align the input and buttons neatly */
     .actions-container {
         display: flex;
-        align-items: stretch; /* Makes buttons same height */
+        align-items: stretch;
         gap: 10px;
         justify-content: flex-end;
     }
 
     .btn-book:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
-    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+        background: linear-gradient(135deg, #1d4ed8, #1e40af);
     }
 
-    /* --- פס מידע קומפקטי (באמצע) --- */
     .compact-stats-bar {
-    background-color: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 100px;
-    padding: 12px 30px;
-    display: inline-flex;
-    align-items: center;
-    gap: 30px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        background-color: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 100px;
+        padding: 12px 30px;
+        display: inline-flex;
+        align-items: center;
+        gap: 30px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
     }
 
     .stat-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 0.95rem;
-    color: #4b5563;
-    white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.95rem;
+        color: #4b5563;
+        white-space: nowrap;
     }
 
-    .stat-item i {
-    color: #3b82f6;
-    font-size: 1.2rem;
-    }
+        .stat-item i {
+            color: #3b82f6;
+            font-size: 1.2rem;
+        }
 
     .stat-divider {
-    width: 1px;
-    height: 24px;
-    background-color: #e5e7eb;
+        width: 1px;
+        height: 24px;
+        background-color: #e5e7eb;
     }
 
-    /* --- קופסת התיאור (Description Box) --- */
     .description-box {
-    background-color: #fff;
-    border: 1px solid #f3f4f6;
-    border-radius: 20px;
-    padding: 25px;
-    max-height: 250px; /* גובה מקסימלי */
-    overflow-y: auto; /* גלילה */
-    box-shadow: inset 0 2px 6px rgba(0,0,0,0.01);
-    text-align: left; /* הטקסט עצמו נשאר מיושר לשמאל לקריאה נוחה */
+        background-color: #fff;
+        border: 1px solid #f3f4f6;
+        border-radius: 20px;
+        padding: 25px;
+        max-height: 250px;
+        overflow-y: auto;
+        box-shadow: inset 0 2px 6px rgba(0,0,0,0.01);
+        text-align: left;
     }
 
-    /* עיצוב פס הגלילה */
-    .description-box::-webkit-scrollbar {
-    width: 8px;
-    }
+        .description-box::-webkit-scrollbar {
+            width: 8px;
+        }
 
-    .description-box::-webkit-scrollbar-track {
-    background: transparent;
-    }
+        .description-box::-webkit-scrollbar-track {
+            background: transparent;
+        }
 
-    .description-box::-webkit-scrollbar-thumb {
-    background-color: #d1d5db;
-    border-radius: 20px;
-    border: 2px solid #fff;
-    }
+        .description-box::-webkit-scrollbar-thumb {
+            background-color: #d1d5db;
+            border-radius: 20px;
+            border: 2px solid #fff;
+        }
 </style>
 
 <div class="container mt-5 mb-5">
@@ -239,7 +231,6 @@
             }
 
             <div id="detailsCarousel" class="carousel slide shadow rounded overflow-hidden bg-black" data-bs-ride="carousel">
-
                 @if (imageList.Count > 1)
                 {
                     <div class="carousel-indicators">
@@ -266,11 +257,9 @@
                 {
                     <button class="carousel-control-prev" type="button" data-bs-target="#detailsCarousel" data-bs-slide="prev">
                         <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Previous</span>
                     </button>
                     <button class="carousel-control-next" type="button" data-bs-target="#detailsCarousel" data-bs-slide="next">
                         <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Next</span>
                     </button>
                 }
             </div>
@@ -289,16 +278,12 @@
                         <i class="bi bi-person-check"></i>
                         <span class="fw-bold">@(Model.MinAge > 0 ? Model.MinAge + "+" : "All Ages")</span>
                     </div>
-
                     <div class="stat-divider"></div>
-
                     <div class="stat-item">
                         <i class="bi bi-arrow-counterclockwise"></i>
                         <span>Cancel: <span class="fw-bold">@Model.CancellationDeadlineDays days</span></span>
                     </div>
-
                     <div class="stat-divider"></div>
-
                     <div class="stat-item">
                         <i class="bi bi-calendar4-week"></i>
                         <span><span class="fw-bold">@Model.AvailableSchedules.Count</span> dates</span>
@@ -314,12 +299,10 @@
                     @Model.Description
                 </p>
             </div>
-
         </div>
     </div>
 
     <div class="dates-card mt-5">
-
         <div class="dates-header">
             <h2 class="fw-bold text-dark mb-2">Available Dates</h2>
             <p class="text-muted">Select your preferred schedule below</p>
@@ -343,7 +326,8 @@
 
                         @foreach (var date in Model.AvailableSchedules)
                         {
-                            bool isLowStock = date.AvailableRooms < 5;
+                            bool isLowStock = date.AvailableRooms > 0 && date.AvailableRooms < 5;
+                            bool isSoldOut = date.AvailableRooms == 0;
 
                             <tr>
                                 <td class="ps-4" style="width: 35%;">
@@ -356,7 +340,7 @@
                                                 @date.StartDate.ToString("MMM dd yyyy") <span class="text-muted mx-2">&rarr;</span> @date.EndDate.ToString("MMM dd yyyy")
                                             </div>
                                             <div class="text-muted small mt-1">
-                                                @date.StartDate.Year 
+                                                @date.StartDate.Year
                                                 @if (date.StartDate.Year != date.EndDate.Year)
                                                 {
                                                     <span>- @date.EndDate.Year</span>
@@ -368,7 +352,13 @@
                                 </td>
 
                                 <td style="width: 20%;">
-                                    @if (isLowStock)
+                                    @if (isSoldOut)
+                                    {
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3 py-2">
+                                            <i class="bi bi-hourglass-split me-1"></i> Sold Out
+                                        </span>
+                                    }
+                                    else if (isLowStock)
                                     {
                                         <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2">
                                             <i class="bi bi-fire me-1"></i> Only @date.AvailableRooms left
@@ -398,22 +388,17 @@
                                 </td>
 
                                 <td class="pe-4 text-end" style="width: 35%;">
-
                                     <div class="actions-container">
 
-                                        <form asp-controller="MyBook" asp-action="AddToBasket" method="post" class="d-flex align-items-center gap-2">
+                                        <form asp-controller="MyBook" asp-action="AddToBasket" method="post"
+                                              class="d-flex align-items-center gap-2 ajax-cart-form"
+                                              data-next-url="/MyBook/Index">
                                             <input type="hidden" name="packageId" value="@Model.Id" />
                                             <input type="hidden" name="packageDateId" value="@date.Id" />
 
                                             <div class="position-relative">
-                                                <input type="number"
-                                                       name="amount"
-                                                       value="1"
-                                                       min="1"
-                                                       max="@date.AvailableRooms"
-                                                       class="traveler-input"
-                                                       title="Travelers"
-                                                       id="input-amount-@date.Id"
+                                                <input type="number" name="amount" value="1" min="1" max="20"
+                                                       class="traveler-input" title="Travelers" id="input-amount-@date.Id"
                                                        onchange="document.getElementById('hidden-amount-@date.Id').value = this.value">
                                                 <span class="position-absolute top-100 start-50 translate-middle-x text-muted"
                                                       style="font-size: 0.65rem; margin-top: 4px; white-space: nowrap;">Guests</span>
@@ -424,10 +409,11 @@
                                             </button>
                                         </form>
 
-                                        <form asp-controller="Order" asp-action="BuyNow" method="post" class="d-flex">
+                                        <form asp-controller="MyBook" asp-action="AddToBasket" method="post"
+                                              class="d-flex ajax-cart-form"
+                                              data-next-url="/Order/Checkout">
                                             <input type="hidden" name="packageId" value="@Model.Id" />
                                             <input type="hidden" name="packageDateId" value="@date.Id" />
-
                                             <input type="hidden" name="amount" id="hidden-amount-@date.Id" value="1" />
 
                                             <button type="submit" class="btn-buy-now text-nowrap" title="Direct Checkout">
@@ -435,7 +421,6 @@
                                             </button>
                                         </form>
                                     </div>
-
                                 </td>
                             </tr>
                         }
@@ -445,3 +430,101 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="waitingListModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-body text-center p-5">
+                <div class="mb-4">
+                    <div style="width: 80px; height: 80px; background: #fee2e2; color: #ef4444; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 2rem;">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                </div>
+
+                <h3 class="fw-bold text-dark mb-2">We're fully booked!</h3>
+                <p class="text-muted mb-4">
+                    The requested amount exceeds our available seats. <br />
+                    Would you like to join the waiting list for this date?
+                </p>
+
+                <form id="waitingListForm" asp-controller="WaitingList" asp-action="Join" method="post">
+                    <input type="hidden" name="packageId" id="wl_packageId" />
+                    <input type="hidden" name="packageDateId" id="wl_packageDateId" />
+                    <input type="hidden" name="requestedAmount" id="wl_requestedAmount" />
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold">
+                            Yes, Join Waiting List
+                        </button>
+                        <button type="button" class="btn btn-light btn-lg rounded-pill fw-bold text-muted" data-bs-dismiss="modal">
+                            No, thanks
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+
+            const forms = document.querySelectorAll('.ajax-cart-form');
+
+            forms.forEach(form => {
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+
+                    // Capture where this specific form wants to go on success
+                    const nextUrl = this.getAttribute('data-next-url');
+                    const formData = new FormData(this);
+
+                    fetch(this.action, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+
+                        // 1. LOGIN NEEDED
+                        if (data.requireLogin) {
+                            // If they clicked "Buy Now", we probably want to send them back to checkout after login
+                            // For now, standard login redirect:
+                            window.location.href = '/User/ViewLogin';
+                            return;
+                        }
+
+                        // 2. FULL -> OPEN WAITING LIST
+                        if (data.isFull) {
+                            document.getElementById('wl_packageId').value = data.packageId;
+                            document.getElementById('wl_packageDateId').value = data.packageDateId;
+                            document.getElementById('wl_requestedAmount').value = data.requestedAmount;
+
+                            var myModal = new bootstrap.Modal(document.getElementById('waitingListModal'));
+                            myModal.show();
+                        }
+                        // 3. SUCCESS -> REDIRECT BASED ON BUTTON CLICKED
+                        else if (data.success) {
+                            if (nextUrl.includes("/Order/Checkout")) {
+                                // Append the specific ID so the checkout ignores the rest of the cart
+                                window.location.href = nextUrl + "?bookingId=" + data.bookingId;
+                            }
+                            else {
+                                // Standard "Add to Cart" flow
+                                window.location.href = nextUrl;
+                            }
+                        }
+                        else {
+                            alert(data.message || "An error occurred.");
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert("Something went wrong with the connection.");
+                    });
+                });
+            });
+        });
+    </script>
+}

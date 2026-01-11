@@ -8,5 +8,6 @@
         // כמות הפריטים בסל
         public int ItemCount { get; set; }
         public int? DirectBookingId { get; set; }
+        public List<myBook> Items { get; set; } = new List<myBook>();
     }
 }

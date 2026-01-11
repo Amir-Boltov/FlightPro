@@ -14,6 +14,24 @@
         margin: 50px auto;
     }
 
+    /* Table Styling */
+    .order-summary-card {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid #e9ecef;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+
+    .item-img {
+        width: 70px;
+        height: 70px;
+        object-fit: cover;
+        margin-right: 15px;
+        border-radius: 10px;
+    }
+
     /* Payment Option Card */
     .payment-option-card {
         border: 2px solid #e9ecef;
@@ -65,15 +83,58 @@
 
 <div class="container checkout-container">
 
+    <div class="order-summary-card">
+        <h4 class="mb-4 fw-bold text-dark border-bottom pb-2">Order Details</h4>
+        <table class="table align-middle">
+            <thead class="text-muted small text-uppercase">
+                <tr>
+                    <th>Trip</th>
+                    <th>Dates</th>
+                    <th>Qty</th>
+                    <th class="text-end">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <img src="@item.Package.MainImageUrl"
+                                     alt="@item.Package.Title"
+                                     class="item-img shadow-sm">
+
+                                <div>
+                                    <span class="fw-bold d-block text-dark">@item.Package.Title</span>
+                                    <small class="text-muted">ID: #@item.Id</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="small">
+                                <i class="far fa-calendar-alt me-1 text-primary"></i>
+                                @item.PackageDate.StartDate.ToString("MMM dd")
+                                <span class="text-muted mx-1">-</span>
+                                @item.PackageDate.EndDate.ToString("MMM dd")
+                            </div>
+                        </td>
+                        <td class="fw-bold text-center">@item.Amount</td>
+                        <td class="text-end fw-bold text-primary">@String.Format("{0:C}", item.TotalPrice)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
     <div class="total-display-card">
         <h5 class="text-white-50 text-uppercase mb-2" style="letter-spacing: 1px;">Total Amount Due</h5>
-        <h1 class="display-3 fw-bold mb-0">$@Model.TotalAmount.ToString("N0")</h1>
+        <h1 class="display-3 fw-bold mb-0">@String.Format("{0:C0}", Model.TotalAmount)</h1>
         <div class="mt-3 text-white-50">
             <i class="fas fa-shopping-bag me-1"></i> For @Model.ItemCount items
         </div>
     </div>
 
-    <div class="text-center mb-5">
+    <div class="text-center mb-4">
         <h3 class="fw-bold text-dark">Select Payment Method</h3>
         <p class="text-muted">Choose how you would like to pay securely</p>
     </div>
@@ -83,7 +144,7 @@
         <div class="col-md-5">
             <form asp-action="PayWithStripe" method="post" class="h-100">
 
-                <input type="hidden" name="directBookingId" value="@Model.DirectBookingId" />
+                <input type="hidden" name="bookingId" value="@Model.DirectBookingId" />
 
                 <button type="submit" class="stretched-btn h-100">
                     <div class="payment-option-card">
@@ -107,7 +168,7 @@
         <div class="col-md-5">
             <form asp-action="PayWithPayPal" method="post" class="h-100">
 
-                <input type="hidden" name="directBookingId" value="@Model.DirectBookingId" />
+                <input type="hidden" name="bookingId" value="@Model.DirectBookingId" />
 
                 <button type="submit" class="stretched-btn h-100">
                     <div class="payment-option-card">

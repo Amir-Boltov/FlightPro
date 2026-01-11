@@ -1,0 +1,89 @@
+﻿@model List<FlightPro.Models.MyWaitingListItem>
+
+@{
+    ViewData["Title"] = "My Waiting List";
+}
+
+<div class="container mt-5 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-dark">My Waiting List</h2>
+        <a href="/Trips/Index" class="btn btn-outline-primary rounded-pill">
+            <i class="bi bi-search me-1"></i> Browse More
+        </a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5 bg-light rounded-4">
+            <i class="bi bi-calendar-x display-1 text-muted opacity-25"></i>
+            <h4 class="mt-3 text-muted">You aren't on any waiting lists.</h4>
+            <p class="text-muted">When a trip is full, you can join the list here.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="py-3 ps-4">Trip</th>
+                            <th class="py-3">Dates</th>
+                            <th class="py-3 text-center">Travelers</th>
+                            <th class="py-3">Joined On</th>
+                            <th class="py-3">Status</th>
+                            <th class="py-3 text-end pe-4">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <img src="@item.MainImageUrl" class="rounded-3 me-3"
+                                             style="width: 60px; height: 60px; object-fit: cover;" />
+                                        <span class="fw-bold text-dark">@item.Title</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="small text-muted">@item.StartDate.ToString("MMM dd") - @item.EndDate.ToString("MMM dd, yyyy")</div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-dark border">
+                                        <i class="bi bi-people me-1"></i> @item.RequestedAmount
+                                    </span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">@item.JoinedAt.ToString("MMM dd, yyyy")</small>
+                                </td>
+                                <td>
+                                    @if (item.IsNotified)
+                                    {
+                                        <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
+                                            <i class="bi bi-bell-fill me-1"></i> Spot Available!
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill">
+                                            <i class="bi bi-hourglass-split me-1"></i> Waiting
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end pe-4">
+                                    <form asp-action="Leave" asp-controller="WaitingList" method="post" onsubmit="return confirm('Are you sure you want to leave this waiting list?');">
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <button type="submit" class="btn btn-sm btn-link text-danger text-decoration-none">
+                                            <i class="bi bi-trash"></i> Leave
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

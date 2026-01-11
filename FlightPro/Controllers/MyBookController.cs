@@ -115,119 +115,199 @@ namespace FlightPro.Controllers
             return View(cartItems);
         }
 
-        // הוספה לסל (POST)
         [HttpPost]
         public IActionResult AddToBasket(int packageId, int packageDateId, int amount)
         {
             int? userId = HttpContext.Session.GetInt32("UserId");
-            if (userId == null) return RedirectToAction("ViewLogin", "User");
+            if (userId == null) return Json(new { success = false, requireLogin = true });
 
-            string connectionString = _configuration.GetConnectionString("myConnect");
-
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
             {
                 conn.Open();
                 using (SqlTransaction transaction = conn.BeginTransaction())
                 {
                     try
                     {
-                        // בדיקת מחיר ומלאי
-                        string checkSql = "SELECT Price, AvailableRooms FROM PackageDates WITH (UPDLOCK) WHERE Id = @DateId";
-                        decimal pricePerPerson = 0;
-                        int availableRooms = 0;
+                        // ---------------------------------------------------------
+                        // STEP 1: Get Price & Discount Info
+                        // ---------------------------------------------------------
+                        // We Join Packages to get the DiscountPrice.
+                        string checkSql = @"
+                    SELECT d.AvailableRooms, d.Price, d.DiscountedPrice 
+                    FROM PackageDates d
+                    JOIN Packages p ON d.PackageId = p.Id
+                    WHERE d.Id = @DateId";
 
-                        using (SqlCommand cmdCheck = new SqlCommand(checkSql, conn, transaction))
+                        int availableRooms = 0;
+                        decimal finalPrice = 0;
+
+                        using (SqlCommand checkCmd = new SqlCommand(checkSql, conn, transaction))
                         {
-                            cmdCheck.Parameters.AddWithValue("@DateId", packageDateId);
-                            using (SqlDataReader reader = cmdCheck.ExecuteReader())
+                            checkCmd.Parameters.AddWithValue("@DateId", packageDateId);
+                            using (SqlDataReader reader = checkCmd.ExecuteReader())
                             {
                                 if (reader.Read())
                                 {
-                                    pricePerPerson = (decimal)reader["Price"];
-                                    availableRooms = reader["AvailableRooms"] != DBNull.Value ? (int)reader["AvailableRooms"] : 0;
+                                    availableRooms = (int)reader["AvailableRooms"];
+                                    decimal basePrice = (decimal)reader["Price"];
+
+                                    // LOGIC: Use DiscountPrice if it exists and is greater than 0
+                                    decimal discountPrice = reader["DiscountedPrice"] != DBNull.Value
+                                                            ? (decimal)reader["DiscountedPrice"]
+                                                            : 0;
+
+                                    finalPrice = (discountPrice > 0) ? discountPrice : basePrice;
                                 }
-                                else return RedirectToAction("Index", "Trips");
+                                else
+                                {
+                                    return Json(new { success = false, message = "Date not found." });
+                                }
                             }
                         }
 
+                        // ---------------------------------------------------------
+                        // STEP 2: Stock Check
+                        // ---------------------------------------------------------
                         if (availableRooms < amount)
                         {
-                            TempData["ErrorMessage"] = "Not enough rooms available.";
-                            return RedirectToAction("Details", "Trips", new { id = packageId });
+                            return Json(new { success = false, isFull = true, packageId, packageDateId, requestedAmount = amount });
                         }
 
-                        // בדיקה האם כבר קיים בסל
-                        string checkExistingSql = "SELECT Id, Amount FROM Bookings WHERE UserId = @UserId AND PackageDateId = @DateId AND Status = 'InCart'";
+                        // ---------------------------------------------------------
+                        // STEP 3: Deduct Stock
+                        // ---------------------------------------------------------
+                        string updateStockSql = "UPDATE PackageDates SET AvailableRooms = AvailableRooms - @Amount WHERE Id = @DateId";
+                        using (SqlCommand stockCmd = new SqlCommand(updateStockSql, conn, transaction))
+                        {
+                            stockCmd.Parameters.AddWithValue("@Amount", amount);
+                            stockCmd.Parameters.AddWithValue("@DateId", packageDateId);
+                            stockCmd.ExecuteNonQuery();
+                        }
+
+                        // ---------------------------------------------------------
+                        // STEP 4: Check for Existing Cart Item (Merge Logic)
+                        // ---------------------------------------------------------
+                        string checkExistingSql = @"
+                    SELECT Id, Amount 
+                    FROM Bookings 
+                    WHERE UserId = @UserId AND PackageDateId = @DateId AND Status = 'InCart'";
+
                         int existingBookingId = 0;
                         int existingAmount = 0;
 
-                        using (SqlCommand cmdExist = new SqlCommand(checkExistingSql, conn, transaction))
+                        using (SqlCommand existingCmd = new SqlCommand(checkExistingSql, conn, transaction))
                         {
-                            cmdExist.Parameters.AddWithValue("@UserId", userId);
-                            cmdExist.Parameters.AddWithValue("@DateId", packageDateId);
-                            using (SqlDataReader reader = cmdExist.ExecuteReader())
+                            existingCmd.Parameters.AddWithValue("@UserId", userId);
+                            existingCmd.Parameters.AddWithValue("@DateId", packageDateId);
+                            using (SqlDataReader r = existingCmd.ExecuteReader())
                             {
-                                if (reader.Read())
+                                if (r.Read())
                                 {
-                                    existingBookingId = (int)reader["Id"];
-                                    existingAmount = (int)reader["Amount"];
+                                    existingBookingId = (int)r["Id"];
+                                    existingAmount = (int)r["Amount"];
                                 }
                             }
                         }
 
-                        // עדכון או יצירה
+                        int resultId = 0;
+
                         if (existingBookingId > 0)
                         {
-                            int newTotalAmount = existingAmount + amount;
-                            decimal newTotalPrice = newTotalAmount * pricePerPerson;
+                            // CASE A: UPDATE EXISTING ROW
+                            // We add the new amount to the old amount, and update the TotalPrice
+                            string updateBookingSql = @"
+                        UPDATE Bookings 
+                        SET Amount = Amount + @NewAmount, 
+                            TotalPrice = (Amount + @NewAmount) * @PricePerUnit
+                        WHERE Id = @Id";
 
-                            string updateBookingSql = "UPDATE Bookings SET Amount = @NewAmount, TotalPrice = @NewPrice WHERE Id = @Id";
-                            using (SqlCommand cmdUpdate = new SqlCommand(updateBookingSql, conn, transaction))
+                            using (SqlCommand updateCmd = new SqlCommand(updateBookingSql, conn, transaction))
                             {
-                                cmdUpdate.Parameters.AddWithValue("@NewAmount", newTotalAmount);
-                                cmdUpdate.Parameters.AddWithValue("@NewPrice", newTotalPrice);
-                                cmdUpdate.Parameters.AddWithValue("@Id", existingBookingId);
-                                cmdUpdate.ExecuteNonQuery();
+                                updateCmd.Parameters.AddWithValue("@NewAmount", amount);
+                                updateCmd.Parameters.AddWithValue("@PricePerUnit", finalPrice);
+                                updateCmd.Parameters.AddWithValue("@Id", existingBookingId);
+                                updateCmd.ExecuteNonQuery();
                             }
+                            resultId = existingBookingId;
                         }
                         else
                         {
-                            decimal totalPrice = (amount * pricePerPerson);
+                            // CASE B: INSERT NEW ROW
                             string insertSql = @"
-                                INSERT INTO Bookings (UserId, PackageId, PackageDateId, Amount, TotalPrice, Status, CreatedAt, IsPaid) 
-                                VALUES (@UserId, @PackageId, @PackageDateId, @Amount, @TotalPrice, 'InCart', GETDATE(), 0)";
+                        INSERT INTO Bookings (UserId, PackageId, PackageDateId, Amount, TotalPrice, Status, CreatedAt, IsPaid)
+                        OUTPUT INSERTED.Id 
+                        VALUES (@UserId, @PkgId, @DateId, @Amount, @Total, 'InCart', GETDATE(), 0)";
 
-                            using (SqlCommand cmdInsert = new SqlCommand(insertSql, conn, transaction))
+                            using (SqlCommand insertCmd = new SqlCommand(insertSql, conn, transaction))
                             {
-                                cmdInsert.Parameters.AddWithValue("@UserId", userId);
-                                cmdInsert.Parameters.AddWithValue("@PackageId", packageId);
-                                cmdInsert.Parameters.AddWithValue("@PackageDateId", packageDateId);
-                                cmdInsert.Parameters.AddWithValue("@Amount", amount);
-                                cmdInsert.Parameters.AddWithValue("@TotalPrice", totalPrice);
-                                cmdInsert.ExecuteNonQuery();
+                                insertCmd.Parameters.AddWithValue("@UserId", userId);
+                                insertCmd.Parameters.AddWithValue("@PkgId", packageId);
+                                insertCmd.Parameters.AddWithValue("@DateId", packageDateId);
+                                insertCmd.Parameters.AddWithValue("@Amount", amount);
+                                insertCmd.Parameters.AddWithValue("@Total", finalPrice * amount);
+                                resultId = (int)insertCmd.ExecuteScalar();
                             }
                         }
 
-                        // הורדת המלאי
-                        string updateStockSql = "UPDATE PackageDates SET AvailableRooms = AvailableRooms - @Amount WHERE Id = @DateId";
-                        using (SqlCommand cmdStock = new SqlCommand(updateStockSql, conn, transaction))
-                        {
-                            cmdStock.Parameters.AddWithValue("@DateId", packageDateId);
-                            cmdStock.Parameters.AddWithValue("@Amount", amount);
-                            cmdStock.ExecuteNonQuery();
-                        }
-
                         transaction.Commit();
+
+                        return Json(new { success = true, bookingId = resultId });
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         transaction.Rollback();
+                        return Json(new { success = false, message = "Error: " + ex.Message });
                     }
                 }
             }
-            return RedirectToAction("Index");
         }
 
+        [HttpPost]
+        public IActionResult JoinWaitingList(int packageId, int packageDateId, int amount)
+        {
+            int? userId = HttpContext.Session.GetInt32("UserId");
+            if (userId == null) return Json(new { success = false, message = "Login required." });
+
+            try
+            {
+                string connectionString = _configuration.GetConnectionString("myConnect");
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    // Check if already in waiting list to avoid duplicates
+                    string checkSql = "SELECT COUNT(*) FROM WaitingList WHERE UserId = @UserId AND PackageDateId = @DateId AND IsNotified = 0";
+                    using (SqlCommand checkCmd = new SqlCommand(checkSql, conn))
+                    {
+                        checkCmd.Parameters.AddWithValue("@UserId", userId);
+                        checkCmd.Parameters.AddWithValue("@DateId", packageDateId);
+                        int count = (int)checkCmd.ExecuteScalar();
+
+                        if (count > 0)
+                        {
+                            return Json(new { success = true, message = "You are already on the waiting list for this trip." });
+                        }
+                    }
+
+                    // Insert into Waiting List
+                    string sql = @"INSERT INTO WaitingList (UserId, PackageId, PackageDateId, RequestedAmount) 
+                           VALUES (@UserId, @PackageId, @DateId, @Amount)";
+
+                    using (SqlCommand cmd = new SqlCommand(sql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@UserId", userId);
+                        cmd.Parameters.AddWithValue("@PackageId", packageId);
+                        cmd.Parameters.AddWithValue("@DateId", packageDateId);
+                        cmd.Parameters.AddWithValue("@Amount", amount);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                return Json(new { success = true, message = "You have been added to the waiting list! We will notify you if a spot opens." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error joining list: " + ex.Message });
+            }
+        }
         // הסרה מהסל (פעולה למוצרים שעדיין לא שולמו)
         public IActionResult RemoveFromBasket(int bookingId)
         {
@@ -369,52 +449,72 @@ namespace FlightPro.Controllers
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
 
-            string connectionString = _configuration.GetConnectionString("myConnect");
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
             {
                 conn.Open();
 
-                // 1. השגת ה-DateId והכמות כדי להחזיר למלאי
-                int packageDateId = 0;
-                int amountToReturn = 1; // ברירת מחדל 1, אם שמרת כמות אחרת צריך לשלוף אותה
-
-                string getSql = "SELECT PackageDateId, Amount FROM Bookings WHERE Id = @Id AND UserId = @UserId";
-                using (SqlCommand cmd = new SqlCommand(getSql, conn))
+                // FIX 1: Wrap in Transaction for safety
+                using (SqlTransaction transaction = conn.BeginTransaction())
                 {
-                    cmd.Parameters.AddWithValue("@Id", bookingId);
-                    cmd.Parameters.AddWithValue("@UserId", userId);
-                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    try
                     {
-                        if (reader.Read())
+                        int packageDateId = 0;
+                        int amountToReturn = 0;
+
+                        // FIX 2: Check Status != 'Canceled' to prevent double-refunds
+                        string getSql = @"SELECT PackageDateId, Amount 
+                                  FROM Bookings 
+                                  WHERE Id = @Id AND UserId = @UserId AND Status != 'Canceled'";
+
+                        using (SqlCommand cmd = new SqlCommand(getSql, conn, transaction))
                         {
-                            packageDateId = (int)reader["PackageDateId"];
-                            // אם יש לך עמודת Amount בטבלה, תוסיף את השורה הבאה:
-                            amountToReturn = reader["Amount"] != DBNull.Value ? (int)reader["Amount"] : 1;
+                            cmd.Parameters.AddWithValue("@Id", bookingId);
+                            cmd.Parameters.AddWithValue("@UserId", userId);
+                            using (SqlDataReader reader = cmd.ExecuteReader())
+                            {
+                                if (reader.Read())
+                                {
+                                    packageDateId = (int)reader["PackageDateId"];
+                                    amountToReturn = reader["Amount"] != DBNull.Value ? (int)reader["Amount"] : 0;
+                                }
+                                else
+                                {
+                                    // If we find no rows, it means it doesn't exist OR is already canceled.
+                                    // We stop here to protect the data.
+                                    return RedirectToAction("OrderHistory");
+                                }
+                            }
                         }
-                    }
-                }
 
-                if (packageDateId > 0)
-                {
-                    // 2. עדכון הסטטוס ל-Canceled (אנחנו לא מוחקים מההיסטוריה, רק מסמנים כבטל)
-                    string updateBooking = "UPDATE Bookings SET Status = 'Canceled' WHERE Id = @Id";
-                    using (SqlCommand cmd = new SqlCommand(updateBooking, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@Id", bookingId);
-                        cmd.ExecuteNonQuery();
-                    }
+                        // 2. Update Status
+                        string updateBooking = "UPDATE Bookings SET Status = 'Canceled' WHERE Id = @Id";
+                        using (SqlCommand cmd = new SqlCommand(updateBooking, conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@Id", bookingId);
+                            cmd.ExecuteNonQuery();
+                        }
 
-                    // 3. החזרת החדרים למלאי
-                    string returnStock = "UPDATE PackageDates SET AvailableRooms = AvailableRooms + @Amount WHERE Id = @DateId";
-                    using (SqlCommand cmd = new SqlCommand(returnStock, conn))
+                        // 3. Return Stock
+                        if (packageDateId > 0 && amountToReturn > 0)
+                        {
+                            string returnStock = "UPDATE PackageDates SET AvailableRooms = AvailableRooms + @Amount WHERE Id = @DateId";
+                            using (SqlCommand cmd = new SqlCommand(returnStock, conn, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@DateId", packageDateId);
+                                cmd.Parameters.AddWithValue("@Amount", amountToReturn);
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+
+                        transaction.Commit();
+                    }
+                    catch
                     {
-                        cmd.Parameters.AddWithValue("@DateId", packageDateId);
-                        cmd.Parameters.AddWithValue("@Amount", amountToReturn);
-                        cmd.ExecuteNonQuery();
+                        transaction.Rollback();
+                        // Handle error
                     }
                 }
             }
-
             return RedirectToAction("OrderHistory");
         }
 
@@ -734,6 +834,109 @@ namespace FlightPro.Controllers
                         transaction.Rollback();
                         return Json(new { success = false, message = ex.Message });
                     }
+                }
+            }
+        }
+        private void TryPromoteFromWaitlist(int packageDateId)
+        {
+            using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
+            {
+                conn.Open();
+
+                // 1. Calculate how many rooms are TRULY available right now
+                // (Assuming you have a View or Logic for this, simplified here:)
+                int totalRooms = 0;
+                int usedRooms = 0;
+
+                // Get Total Capacity
+                string capSql = "SELECT TotalRooms FROM PackageDates WHERE Id = @Id";
+                using (SqlCommand cmd = new SqlCommand(capSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", packageDateId);
+                    object res = cmd.ExecuteScalar();
+                    if (res != null) totalRooms = (int)res;
+                }
+
+                // Get Used Capacity (Count 'Paid', 'InCart', AND 'Reserved')
+                string usedSql = "SELECT ISNULL(SUM(Amount),0) FROM Bookings WHERE PackageDateId = @Id AND Status IN ('Paid', 'InCart', 'Reserved')";
+                using (SqlCommand cmd = new SqlCommand(usedSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", packageDateId);
+                    usedRooms = (int)cmd.ExecuteScalar();
+                }
+
+                int availableNow = totalRooms - usedRooms;
+
+                if (availableNow <= 0) return; // No space, stop.
+
+                // 2. Find waiters who fit into the available space
+                // We order by JoinedAt so the first person gets priority (FIFO)
+                string waiterSql = @"
+            SELECT * FROM WaitingList 
+            WHERE PackageDateId = @Id AND IsNotified = 0 
+            ORDER BY JoinedAt ASC";
+
+                var candidates = new List<dynamic>();
+
+                using (SqlCommand cmd = new SqlCommand(waiterSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", packageDateId);
+                    using (SqlDataReader r = cmd.ExecuteReader())
+                    {
+                        while (r.Read())
+                        {
+                            candidates.Add(new
+                            {
+                                Id = (int)r["Id"],
+                                UserId = (int)r["UserId"],
+                                PackageId = (int)r["PackageId"],
+                                ReqAmount = (int)r["RequestedAmount"]
+                            });
+                        }
+                    }
+                }
+
+                // 3. Iterate and "Shadow Book"
+                foreach (var waiter in candidates)
+                {
+                    if (waiter.ReqAmount <= availableNow)
+                    {
+                        // A. Create a 'Reserved' Booking (Shadow Booking)
+                        // This physically blocks the slot in the database so no one else can take it.
+                        string bookSql = @"
+                    INSERT INTO Bookings (UserId, PackageId, PackageDateId, Amount, TotalPrice, Status, BookedDate)
+                    SELECT @UserId, @PackageId, @PackageDateId, @Amount, (Price * @Amount), 'Reserved', GETDATE()
+                    FROM PackageDates WHERE Id = @PackageDateId";
+
+                        using (SqlCommand bookCmd = new SqlCommand(bookSql, conn))
+                        {
+                            bookCmd.Parameters.AddWithValue("@UserId", waiter.UserId);
+                            bookCmd.Parameters.AddWithValue("@PackageId", waiter.PackageId);
+                            bookCmd.Parameters.AddWithValue("@PackageDateId", packageDateId);
+                            bookCmd.Parameters.AddWithValue("@Amount", waiter.ReqAmount);
+                            bookCmd.ExecuteNonQuery();
+                        }
+
+                        // B. Update Waitlist Status (Mark as Notified)
+                        // We give them 24 hours to accept.
+                        string updateWl = @"
+                    UPDATE WaitingList 
+                    SET IsNotified = 1, NotificationExpiresAt = DATEADD(hour, 24, GETDATE())
+                    WHERE Id = @WlId";
+
+                        using (SqlCommand upCmd = new SqlCommand(updateWl, conn))
+                        {
+                            upCmd.Parameters.AddWithValue("@WlId", waiter.Id);
+                            upCmd.ExecuteNonQuery();
+                        }
+
+                        // C. Decrease local counter so we don't overbook the next person in this loop
+                        availableNow -= waiter.ReqAmount;
+
+                        // TODO: Send Email here ("Good news! A spot opened up...")
+                    }
+
+                    if (availableNow <= 0) break;
                 }
             }
         }
