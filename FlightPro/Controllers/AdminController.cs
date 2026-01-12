@@ -25,77 +25,108 @@ namespace FlightPro.Controllers
         // GET: Admin Dashboard
         public IActionResult Index()
         {
-            var model = new AdminDashboardViewModel();
+            // 1. אתחול המודל
+            var model = new AdminDashboardViewModel
+            {
+                RecentBookings = new List<BookingViewModel>(),
+
+                // משאיר אותם כרשימות ריקות כדי שהאתר לא יקרוס אם ה-HTML מחפש אותם
+                ChartLabels = new List<string>(),
+                ChartData = new List<decimal>()
+            };
+
             string connStr = _configuration.GetConnectionString("myConnect");
 
-            using (SqlConnection conn = new SqlConnection(connStr))
+            try
             {
-                conn.Open();
-                string statsSql = @"
-                    SELECT 
-                        (SELECT COUNT(*) FROM Bookings) as TotalBookings,
-                        (SELECT ISNULL(SUM(TotalPrice),0) FROM Bookings) as TotalRevenue,
-                        (SELECT COUNT(*) FROM Packages) as ActivePackages,
-                        (SELECT COUNT(*) FROM Users) as UsersCount";
-
-                using (SqlCommand cmd = new SqlCommand(statsSql, conn))
-                using (SqlDataReader reader = cmd.ExecuteReader())
+                using (SqlConnection conn = new SqlConnection(connStr))
                 {
-                    if (reader.Read())
-                    {
-                        model.TotalBookings = (int)reader["TotalBookings"];
-                        model.TotalRevenue = (decimal)reader["TotalRevenue"];
-                        model.ActivePackages = (int)reader["ActivePackages"];
-                        model.UsersCount = (int)reader["UsersCount"];
-                    }
-                }
-                string bookingSql = @"
-                    SELECT TOP 10 b.Id, b.CreatedAt, b.TotalPrice, u.FirstName,u.LastName, p.Title, b.Status
-                    FROM Bookings b
-                    JOIN Users u ON b.UserId = u.Id
-                    JOIN PackageDates pd ON b.PackageDateId = pd.Id
-                    JOIN Packages p ON pd.PackageId = p.Id
-                    ORDER BY b.CreatedAt DESC";
+                    conn.Open();
 
-                using (SqlCommand cmd = new SqlCommand(bookingSql, conn))
-                using (SqlDataReader reader = cmd.ExecuteReader())
-                {
-                    while (reader.Read())
+                    // --- חלק 1: סטטיסטיקות (קוביות) ---
+                    string statsSql = @"
+                SELECT 
+                    (SELECT COUNT(*) FROM Bookings) as TotalBookings,
+                    (SELECT ISNULL(SUM(TotalPrice),0) FROM Bookings) as TotalRevenue,
+                    (SELECT COUNT(*) FROM Packages) as ActivePackages,
+                    (SELECT COUNT(*) FROM Users) as UsersCount";
+
+                    using (SqlCommand cmd = new SqlCommand(statsSql, conn))
+                    using (SqlDataReader reader = cmd.ExecuteReader())
                     {
-                        model.RecentBookings.Add(new BookingViewModel
+                        if (reader.Read())
                         {
-                            Id = (int)reader["Id"],
-                            CreatedAt = (DateTime)reader["CreatedAt"],
-                            PricePaid = (decimal)reader["TotalPrice"],
-                            CustFirstName = reader["FirstName"].ToString(),
-                            CustLastName = reader["LastName"].ToString(),
-                            PackageTitle = reader["Title"].ToString(),
-                            Status = reader["Status"].ToString()
-                        });
+                            model.TotalBookings = Convert.ToInt32(reader["TotalBookings"]);
+                            model.TotalRevenue = Convert.ToDecimal(reader["TotalRevenue"]);
+                            model.ActivePackages = Convert.ToInt32(reader["ActivePackages"]);
+                            model.UsersCount = Convert.ToInt32(reader["UsersCount"]);
+                        }
+                    }
+
+                    // --- חלק 2: טבלה (הזמנות אחרונות) ---
+                    string bookingSql = @"
+                SELECT TOP 10 b.Id, b.CreatedAt, b.TotalPrice, u.FirstName, u.LastName, p.Title, b.Status
+                FROM Bookings b
+                JOIN Users u ON b.UserId = u.Id
+                JOIN PackageDates pd ON b.PackageDateId = pd.Id
+                JOIN Packages p ON pd.PackageId = p.Id
+                ORDER BY b.CreatedAt DESC";
+
+                    using (SqlCommand cmd = new SqlCommand(bookingSql, conn))
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            model.RecentBookings.Add(new BookingViewModel
+                            {
+                                Id = Convert.ToInt32(reader["Id"]),
+                                CreatedAt = Convert.ToDateTime(reader["CreatedAt"]),
+                                PricePaid = Convert.ToDecimal(reader["TotalPrice"]),
+                                CustFirstName = reader["FirstName"].ToString(),
+                                CustLastName = reader["LastName"].ToString(),
+                                PackageTitle = reader["Title"].ToString(),
+                                Status = reader["Status"].ToString()
+                            });
+                        }
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                // אם יש שגיאה בחיבור, נראה אותה ב-Output ולא נקרוס
+                Console.WriteLine("Error: " + ex.Message);
+            }
+
             return View(model);
         }
         public IActionResult Packages()
         {
-            var list = new List<PackageModel>();
+            // 1. יצירת המודל המאוחד (שים לב לשם המחלקה שיצרנו קודם)
+            var viewModel = new AdminDashboardViewModel
+            {
+                AllPackages = new List<PackageModel>(),
+                TopPackageNames = new List<string>(),
+                TopPackageSales = new List<int>()
+            };
+
             string connStr = _configuration.GetConnectionString("myConnect");
 
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
-                string sql = @"
-                    SELECT p.Id, p.Title, p.Category, p.MinAge, d.Name as City, d.Country
-                    FROM Packages p
-                    JOIN Destinations d ON p.DestinationId = d.Id";
 
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                // --- חלק א': שליפת כל החבילות לטבלה ---
+                string sqlPackages = @"
+            SELECT p.Id, p.Title, p.Category, p.MinAge, d.Name as City, d.Country
+            FROM Packages p
+            JOIN Destinations d ON p.DestinationId = d.Id";
+
+                using (SqlCommand cmd = new SqlCommand(sqlPackages, conn))
                 using (SqlDataReader reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        list.Add(new PackageModel
+                        viewModel.AllPackages.Add(new PackageModel
                         {
                             Id = (int)reader["Id"],
                             Title = reader["Title"].ToString(),
@@ -106,8 +137,30 @@ namespace FlightPro.Controllers
                         });
                     }
                 }
+
+                // --- חלק ב': שליפת נתונים לגרף (5 החבילות הנמכרות ביותר) ---
+                // אנו עושים JOIN בין Bookings -> PackageDates -> Packages כדי לקבל את השם
+                string sqlTop = @"
+            SELECT TOP 5 p.Title, COUNT(b.Id) as SalesCount
+            FROM Bookings b
+            JOIN PackageDates pd ON b.PackageDateId = pd.Id
+            JOIN Packages p ON pd.PackageId = p.Id
+            GROUP BY p.Title
+            ORDER BY SalesCount DESC";
+
+                using (SqlCommand cmd = new SqlCommand(sqlTop, conn))
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        // הוספת הנתונים לרשימות של הגרף
+                        viewModel.TopPackageNames.Add(reader["Title"].ToString());
+                        viewModel.TopPackageSales.Add((int)reader["SalesCount"]);
+                    }
+                }
             }
-            return View(list);
+
+            return View(viewModel);
         }
         // GET: Show the form (Load Destinations for the Dropdown)
         [HttpGet]
@@ -753,7 +806,8 @@ namespace FlightPro.Controllers
             }
             return RedirectToAction("Users");
         }
-
+        
+        
         // 6. TOGGLE ROLE
         [HttpPost]
         public IActionResult ToggleRole(int id)
