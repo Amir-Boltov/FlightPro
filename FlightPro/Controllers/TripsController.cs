@@ -68,7 +68,7 @@ public class TripsController : Controller
                 JOIN Destinations d ON p.DestinationId = d.Id
                 JOIN PackageDates pd ON p.Id = pd.PackageId
                 OUTER APPLY (SELECT TOP 1 Url FROM PackageImages WHERE PackageId = p.Id AND IsPrimary = 1) pi
-                WHERE pd.StartDate >= GETDATE() ";
+                WHERE COALESCE(pd.BookingEndDate, pd.StartDate) >= CAST(GETDATE() AS DATE)";
 
             // 3. Apply Filters Dynamically
             var parameters = new List<SqlParameter>();

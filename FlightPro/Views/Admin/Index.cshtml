@@ -9,11 +9,6 @@
             <div class="sidebar-sticky">
                 <ul class="nav flex-column">
                     <li class="nav-item">
-                        <a class="nav-link active" href="#">
-                            <i class="bi bi-house-door"></i> Overview
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <a class="nav-link" asp-action="Packages">
                             <i class="bi bi-box-seam"></i> Manage Packages
                         </a>
@@ -24,8 +19,13 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        <a class="nav-link" asp-controller="Admin" asp-action="Waitlists">
                             <i class="bi bi-list-check"></i> Waiting Lists
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Admin" asp-action="Destinations">
+                            <i class="bi bi-geo-alt"></i> Manage Destinations
                         </a>
                     </li>
                 </ul>

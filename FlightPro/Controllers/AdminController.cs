@@ -7,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using FlightPro.Attributes;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Text.Json;
+using System.Globalization;
 
 
 
@@ -109,67 +111,81 @@ namespace FlightPro.Controllers
             }
             return View(list);
         }
-        // GET: Show the form (Load Destinations for the Dropdown)
         [HttpGet]
         public IActionResult CreatePackage()
         {
-            // Fetch destinations for the dropdown
-            string connStr = _configuration.GetConnectionString("myConnect");
-            var destinations = new List<SelectListItem>();
-
-            using (SqlConnection conn = new SqlConnection(connStr))
-            {
-                conn.Open();
-                string sql = "SELECT Id, Name, Country FROM Destinations ORDER BY Country, Name";
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
-                using (SqlDataReader reader = cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        destinations.Add(new SelectListItem
-                        {
-                            Value = reader["Id"].ToString(),
-                            Text = $"{reader["Name"]}, {reader["Country"]}"
-                        });
-                    }
-                }
-            }
-
-            ViewBag.Destinations = destinations; // Pass to View
+            ViewBag.DestinationsJson = GetDestinationsJson(); // Reuse the helper from previous step
             return View(new PackageModel());
         }
 
-        // POST: Process the new package (Now saves DestinationId)
+        // POST: Process logic
         [HttpPost]
-        public IActionResult CreatePackage(PackageModel model, int DestinationId)
+        public IActionResult CreatePackage(PackageModel model, string CountryName, string CityName)
         {
-            // 1. Basic Validation
+            // 1. Basic Model Validation (Excluding DestinationId since we calculate it manually)
             if (!ModelState.IsValid)
             {
-                // Reload destinations if we have to return the view due to error
-                // (Re-run the Fetch destinations logic here or extract it to a helper method)
-                return CreatePackage();
+                // If Model is invalid, reload the list and return view
+                ViewBag.DestinationsJson = GetDestinationsJson();
+                return View(model);
             }
 
             string connStr = _configuration.GetConnectionString("myConnect");
+            int destinationId = 0;
             int newPackageId = 0;
+
+            // Standardize input (e.g., "paris" becomes "Paris")
+            TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
+            CountryName = textInfo.ToTitleCase(CountryName.Trim());
+            CityName = textInfo.ToTitleCase(CityName.Trim());
 
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
 
-                // 2. Insert Package (ADDED DestinationId)
-                string sql = @"
+                // ---------------------------------------------------------
+                // 2. HANDLE DESTINATION (Find Existing OR Create New)
+                // ---------------------------------------------------------
+
+                // Check if this Country+City combo already exists
+                string checkDestSql = "SELECT Id FROM Destinations WHERE Country = @C AND Name = @N";
+                using (SqlCommand cmd = new SqlCommand(checkDestSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@C", CountryName);
+                    cmd.Parameters.AddWithValue("@N", CityName);
+                    object result = cmd.ExecuteScalar();
+
+                    if (result != null)
+                    {
+                        // Found existing ID
+                        destinationId = (int)result;
+                    }
+                    else
+                    {
+                        string insertDestSql = "INSERT INTO Destinations (Country, Name) VALUES (@C, @N); SELECT CAST(scope_identity() AS int);";
+                        using (SqlCommand insertCmd = new SqlCommand(insertDestSql, conn))
+                        {
+                            insertCmd.Parameters.AddWithValue("@C", CountryName);
+                            insertCmd.Parameters.AddWithValue("@N", CityName);
+                            destinationId = (int)insertCmd.ExecuteScalar();
+                        }
+                    }
+                }
+
+                // ---------------------------------------------------------
+                // 3. INSERT PACKAGE
+                // ---------------------------------------------------------
+                string pkgSql = @"
             INSERT INTO Packages (Title, Description, Category, DestinationId, MinAge, CancellationDeadlineDays, ExpiryMinutes) 
             VALUES (@Title, @Desc, @Cat, @DestId, @Age, @Cancel, @Expiry);
             SELECT CAST(scope_identity() AS int);";
 
-                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SqlCommand cmd = new SqlCommand(pkgSql, conn))
                 {
                     cmd.Parameters.AddWithValue("@Title", model.Title);
                     cmd.Parameters.AddWithValue("@Desc", model.Description);
                     cmd.Parameters.AddWithValue("@Cat", model.Category);
-                    cmd.Parameters.AddWithValue("@DestId", DestinationId); 
+                    cmd.Parameters.AddWithValue("@DestId", destinationId); // Use the ID we found or created
                     cmd.Parameters.AddWithValue("@Age", model.MinAge);
                     cmd.Parameters.AddWithValue("@Cancel", model.CancellationDeadlineDays);
                     cmd.Parameters.AddWithValue("@Expiry", model.ExpiryMinutes);
@@ -177,7 +193,9 @@ namespace FlightPro.Controllers
                     newPackageId = (int)cmd.ExecuteScalar();
                 }
 
-                // 3. Insert Images
+                // ---------------------------------------------------------
+                // 4. INSERT IMAGES
+                // ---------------------------------------------------------
                 void InsertImage(string url, bool isPrimary)
                 {
                     if (!string.IsNullOrEmpty(url))
@@ -199,8 +217,29 @@ namespace FlightPro.Controllers
                 InsertImage(model.ImageUrl4, false);
             }
 
-            TempData["Success"] = "Package created! Now you can add dates.";
+            TempData["Success"] = "Package created successfully!";
             return RedirectToAction("EditPackage", new { id = newPackageId });
+        }
+
+        private string GetDestinationsJson()
+        {
+            var list = new List<object>();
+            string connStr = _configuration.GetConnectionString("myConnect");
+
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+                string sql = "SELECT Id, Name, Country FROM Destinations ORDER BY Country, Name";
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        list.Add(new { Id = reader["Id"], Name = reader["Name"], Country = reader["Country"] });
+                    }
+                }
+            }
+            return JsonSerializer.Serialize(list);
         }
 
         // POST: Delete Package
@@ -247,39 +286,63 @@ namespace FlightPro.Controllers
 
         // POST: Save the new date
         [HttpPost]
-        public IActionResult AddPackageDate(int packageId, DateTime startDate, DateTime endDate, decimal price, int totalRooms)
+        public IActionResult AddPackageDate(int packageId, DateTime startDate, DateTime endDate,DateTime bookingEndDate, decimal price, int totalRooms)
         {
+            if (startDate < DateTime.Now)
+            {
+                ModelState.AddModelError("", "Start date must be in the future.");
+                ViewBag.PackageId = packageId;
+                return View();
+            }
+            if (endDate < startDate)
+            {
+                ModelState.AddModelError("endDate", "End date cannot be before start date.");
+                ViewBag.PackageId = packageId;
+                return View();
+            }
+            if (bookingEndDate > startDate)
+            {
+                ModelState.AddModelError("bookingEndDate", "Booking deadline cannot be after the trip starts.");
+            }
+            if (bookingEndDate < DateTime.Now.Date)
+            {
+                ModelState.AddModelError("bookingEndDate", "Booking deadline cannot be in the past.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                ViewBag.PackageId = packageId;
+                return View();
+            }
             string connStr = _configuration.GetConnectionString("myConnect");
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
-
-                // Validation: Ensure Start Date is in the future
-                if (startDate < DateTime.Now)
-                {
-                    ModelState.AddModelError("", "Start date must be in the future.");
-                    ViewBag.PackageId = packageId;
-                    return View();
-                }
-
+                // Updated SQL to include BookingEndDate
                 string sql = @"
-            INSERT INTO PackageDates (PackageId, StartDate, EndDate, Price, AvailableRooms, TotalRooms)
-            VALUES (@Pid, @Start, @End, @Price, @Rooms, @Rooms)"; // Start with Available = Total
+            INSERT INTO PackageDates 
+            (PackageId, StartDate, EndDate, BookingEndDate, Price, TotalRooms, AvailableRooms)
+            VALUES 
+            (@Pid, @Start, @End, @BookEnd, @Price, @Total, @Total)";
+                // Note: AvailableRooms starts equal to TotalRooms
 
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@Pid", packageId);
                     cmd.Parameters.AddWithValue("@Start", startDate);
                     cmd.Parameters.AddWithValue("@End", endDate);
-                    cmd.Parameters.AddWithValue("@Price", price);
-                    cmd.Parameters.AddWithValue("@Rooms", totalRooms);
 
+                    // New Parameter
+                    cmd.Parameters.AddWithValue("@BookEnd", bookingEndDate);
+
+                    cmd.Parameters.AddWithValue("@Price", price);
+                    cmd.Parameters.AddWithValue("@Total", totalRooms);
                     cmd.ExecuteNonQuery();
                 }
             }
 
-            TempData["Success"] = "New travel date added successfully!";
-            return RedirectToAction("Packages");
+            TempData["Success"] = "New schedule added successfully.";
+            return RedirectToAction("EditPackage", new { id = packageId });
         }
         // ==========================================
         // PART 1: EDIT MAIN PACKAGE DETAILS
@@ -290,6 +353,7 @@ namespace FlightPro.Controllers
         public IActionResult EditPackage(int id)
         {
             PackageModel package = null;
+            var categoryList = new List<string>();
             string connStr = _configuration.GetConnectionString("myConnect");
 
             using (SqlConnection conn = new SqlConnection(connStr))
@@ -369,8 +433,18 @@ namespace FlightPro.Controllers
                         }
                     }
                 }
-            }
+                string catSql = "SELECT DISTINCT Category FROM Packages WHERE Category IS NOT NULL AND Category <> '' ORDER BY Category";
 
+                using (SqlCommand cmd = new SqlCommand(catSql, conn))
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        categoryList.Add(reader["Category"].ToString());
+                    }
+                }
+            }
+            ViewBag.Categories = categoryList;
             return View(package);
         }
         // POST: Save Package and Images
@@ -477,14 +551,12 @@ namespace FlightPro.Controllers
         }
 
         [HttpPost]
-        public IActionResult EditSchedule(int id, int packageId, decimal price, int rooms, decimal? discountPrice, DateTime? discountEndDate)
+        public IActionResult EditSchedule(int id, int packageId, decimal price, int totalRooms, decimal? discountPrice, DateTime? discountEndDate)
         {
-            // --- REQUIREMENT: Discount last for a week at most ---
+
             if (discountPrice.HasValue && discountEndDate.HasValue)
             {
-                // Calculate days between NOW and the Discount End Date
                 var daysUntilEnd = (discountEndDate.Value - DateTime.Now).TotalDays;
-
                 if (daysUntilEnd > 7)
                 {
                     TempData["Error"] = "Error: Discounts cannot last longer than 7 days from today.";
@@ -496,25 +568,223 @@ namespace FlightPro.Controllers
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
+
+                // 1. FETCH CURRENT TOTAL
+                string checkSql = "SELECT TotalRooms FROM PackageDates WHERE Id = @Id";
+                int currentTotal = 0;
+
+                using (SqlCommand checkCmd = new SqlCommand(checkSql, conn))
+                {
+                    checkCmd.Parameters.AddWithValue("@Id", id);
+                    object result = checkCmd.ExecuteScalar();
+                    if (result != null) currentTotal = (int)result;
+                }
+
+                // 2. STRICT RULE: ONLY INCREASES ALLOWED
+                if (totalRooms < currentTotal)
+                {
+                    TempData["Error"] = $"Error: You cannot reduce the room count. The current total is {currentTotal}.";
+                    return RedirectToAction("EditSchedule", new { id = id });
+                }
+
+                // 3. CALCULATE DIFFERENCE (Will always be >= 0 now)
+                // Example: Old 20, New 30. Diff = +10.
+                int capacityDifference = totalRooms - currentTotal;
+
+                // 4. UPDATE
+                // We add the difference to AvailableRooms to ensure we don't accidentally delete bookings.
                 string sql = @"
             UPDATE PackageDates 
-            SET Price=@Price, AvailableRooms=@Rooms, DiscountedPrice=@DiscPrice, DiscountEndDate=@DiscEnd
+            SET Price=@Price, 
+                TotalRooms=@NewTotal,
+                AvailableRooms = AvailableRooms + @Diff, 
+                DiscountedPrice=@DiscPrice, 
+                DiscountEndDate=@DiscEnd,
+                StartDate=@StartDate,
+                EndDate=@EndDate
             WHERE Id=@Id";
 
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@Price", price);
-                    cmd.Parameters.AddWithValue("@Rooms", rooms);
-                    // Handle NULLs for discount
+                    cmd.Parameters.AddWithValue("@NewTotal", totalRooms);
+                    cmd.Parameters.AddWithValue("@Diff", capacityDifference);
+                    // ... (Add other parameters: DiscPrice, DiscEnd, StartDate, EndDate, Id) ...
+
+                    // FILLING IN THE REST FOR COMPLETENESS:
                     cmd.Parameters.AddWithValue("@DiscPrice", (object)discountPrice ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@DiscEnd", (object)discountEndDate ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@Id", id);
+
                     cmd.ExecuteNonQuery();
                 }
             }
 
             TempData["Success"] = "Schedule updated successfully.";
             return RedirectToAction("EditPackage", new { id = packageId });
+        }
+        [HttpPost]
+        public IActionResult DeleteSchedule(int dateId, int packageId)
+        {
+            string connStr = _configuration.GetConnectionString("myConnect");
+
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+
+                // 1. SAFETY CHECK: Ensure no bookings exist for this specific date
+                // NOTE: Replace 'PackageDateId' with the actual column name in your Bookings table if it's different.
+                string checkSql = "SELECT COUNT(*) FROM Bookings WHERE PackageDateId = @DateId";
+
+                using (SqlCommand cmd = new SqlCommand(checkSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@DateId", dateId);
+                    int bookingCount = (int)cmd.ExecuteScalar();
+
+                    if (bookingCount > 0)
+                    {
+                        TempData["Error"] = $"Cannot delete this date. There are {bookingCount} existing booking(s) associated with it.";
+                        // Redirect back to the Edit Package page
+                        return RedirectToAction("EditPackage", new { id = packageId });
+                    }
+                }
+
+                // 2. DELETE: If count is 0, it is safe to delete
+                string deleteSql = "DELETE FROM PackageDates WHERE Id = @DateId";
+
+                using (SqlCommand cmd = new SqlCommand(deleteSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@DateId", dateId);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            TempData["Success"] = "Date deleted successfully.";
+
+            // Redirect back to the Edit Package page so the user sees the updated list
+            return RedirectToAction("EditPackage", new { id = packageId });
+        }
+        // GET: List all destinations
+        [HttpGet]
+        public IActionResult Destinations()
+        {
+            var destinations = new List<DestinationModel>();
+            string connStr = _configuration.GetConnectionString("myConnect");
+
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+                // Fixed: Select Name instead of City
+                string sql = "SELECT * FROM Destinations ORDER BY Country, Name";
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        destinations.Add(new DestinationModel
+                        {
+                            Id = (int)reader["Id"],
+                            Name = reader["Name"].ToString(), // Fixed column mapping
+                            Country = reader["Country"].ToString()
+                        });
+                    }
+                }
+            }
+            return View(destinations);
+        }
+
+        // GET: Show the form
+        [HttpGet]
+        public IActionResult CreateDestination()
+        {
+            return View();
+        }
+
+        // POST: Save new destination
+        [HttpPost]
+        public IActionResult CreateDestination(DestinationModel model)
+        {
+            // 1. Validation: Use Name instead of City
+            if (string.IsNullOrWhiteSpace(model.Name) || string.IsNullOrWhiteSpace(model.Country))
+            {
+                TempData["Error"] = "Name and Country are required.";
+                return View(model);
+            }
+
+            string connStr = _configuration.GetConnectionString("myConnect");
+
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+
+                // 2. DUPLICATE CHECK
+                // Fixed: Check against 'Name' column
+                string checkSql = "SELECT COUNT(*) FROM Destinations WHERE Name = @Name AND Country = @Country";
+                using (SqlCommand cmd = new SqlCommand(checkSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Name", model.Name.Trim());
+                    cmd.Parameters.AddWithValue("@Country", model.Country.Trim());
+                    int exists = (int)cmd.ExecuteScalar();
+
+                    if (exists > 0)
+                    {
+                        TempData["Error"] = $"The destination {model.Name}, {model.Country} already exists.";
+                        return View(model);
+                    }
+                }
+
+                // 3. INSERT
+                // Fixed: Removed @Url and matched parameters to columns exactly
+                string sql = "INSERT INTO Destinations (Name, Country) VALUES (@Name, @Country)";
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Name", model.Name.Trim());
+                    cmd.Parameters.AddWithValue("@Country", model.Country.Trim());
+
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            TempData["Success"] = "Destination added successfully!";
+            return RedirectToAction("Destinations");
+        }
+
+        // POST: Delete destination
+        [HttpPost]
+        public IActionResult DeleteDestination(int id)
+        {
+            string connStr = _configuration.GetConnectionString("myConnect");
+
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+
+                // 1. SAFETY CHECK (Checks Packages table)
+                string checkSql = "SELECT COUNT(*) FROM Packages WHERE DestinationId = @Id";
+
+                using (SqlCommand cmd = new SqlCommand(checkSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", id);
+                    int count = (int)cmd.ExecuteScalar();
+
+                    if (count > 0)
+                    {
+                        TempData["Error"] = $"Cannot delete. Attached to {count} package(s).";
+                        return RedirectToAction("Destinations");
+                    }
+                }
+
+                // 2. DELETE
+                string deleteSql = "DELETE FROM Destinations WHERE Id = @Id";
+                using (SqlCommand cmd = new SqlCommand(deleteSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", id);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            TempData["Success"] = "Destination deleted successfully.";
+            return RedirectToAction("Destinations");
         }
         // // ==========================================
         // USER MANAGEMENT SECTION
@@ -779,6 +1049,91 @@ namespace FlightPro.Controllers
             }
             TempData["Success"] = "User role updated.";
             return RedirectToAction("Users");
+        }
+        public IActionResult Waitlists()
+        {
+            var model = new List<AdminWaitlistViewModel>();
+
+            string connStr = _configuration.GetConnectionString("myConnect");
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+                string sql = @"
+            SELECT 
+                w.Id AS WaitlistId, 
+                w.JoinedAt, 
+                w.RequestedAmount, 
+                w.IsNotified,
+                u.Id AS UserId,        -- FIX: Changed from u.UserId to u.Id
+                u.FirstName, 
+                u.LastName, 
+                u.Email,
+                pd.Id AS DateId, 
+                pd.StartDate, 
+                pd.EndDate,
+                p.Title
+            FROM WaitingList w
+            JOIN Users u ON w.UserId = u.Id  -- FIX: Joined WaitingList.UserId with Users.Id
+            JOIN PackageDates pd ON w.PackageDateId = pd.Id
+            JOIN Packages p ON pd.PackageId = p.Id
+            ORDER BY p.Title, pd.StartDate, w.JoinedAt";
+
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        int dateId = (int)reader["DateId"];
+
+                        var group = model.FirstOrDefault(x => x.PackageDateId == dateId);
+                        if (group == null)
+                        {
+                            group = new AdminWaitlistViewModel
+                            {
+                                PackageDateId = dateId,
+                                PackageTitle = reader["Title"].ToString(),
+                                StartDate = (DateTime)reader["StartDate"],
+                                EndDate = (DateTime)reader["EndDate"]
+                            };
+                            model.Add(group);
+                        }
+
+                        group.Entries.Add(new WaitlistEntry
+                        {
+                            WaitlistId = (int)reader["WaitlistId"],
+                            UserId = (int)reader["UserId"], // This now reads the alias 'UserId' which maps to u.Id
+                            UserName = $"{reader["FirstName"]} {reader["LastName"]}",
+                            UserEmail = reader["Email"].ToString(),
+                            JoinedAt = (DateTime)reader["JoinedAt"],
+                            RequestedAmount = (int)reader["RequestedAmount"],
+                            IsNotified = (bool)reader["IsNotified"]
+                        });
+                    }
+                }
+            }
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public IActionResult RemoveFromWaitlist(int waitlistId)
+        {
+            string connStr = _configuration.GetConnectionString("myConnect");
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+                // Changed table name from 'Waitlists' to 'WaitingList'
+                string sql = "DELETE FROM WaitingList WHERE Id = @Id";
+
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", waitlistId);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            TempData["Success"] = "User removed from waitlist successfully.";
+            return RedirectToAction("Waitlists");
         }
 
     }

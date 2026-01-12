@@ -1,0 +1,99 @@
+﻿@model List<FlightPro.Models.AdminWaitlistViewModel>
+
+@{
+    ViewData["Title"] = "Manage Waitlists";
+}
+
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h3 fw-bold text-dark"><i class="bi bi-list-check me-2"></i>Manage Waiting Lists</h2>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5 text-muted bg-light rounded-3">
+            <i class="bi bi-clipboard-check display-4 mb-3"></i>
+            <h5>No Active Waitlists</h5>
+            <p>Currently, no users are waiting for any fully booked trips.</p>
+        </div>
+    }
+    else
+    {
+        <div class="accordion" id="waitlistAccordion">
+            @foreach (var group in Model)
+            {
+                <div class="accordion-item shadow-sm mb-3 border-0 rounded overflow-hidden">
+                    <h2 class="accordion-header" id="heading-@group.PackageDateId">
+                        <button class="accordion-button collapsed bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@group.PackageDateId" aria-expanded="false">
+                            <div class="d-flex w-100 justify-content-between align-items-center me-3">
+                                <div>
+                                    <span class="fw-bold text-primary me-2">@group.PackageTitle</span>
+                                    <span class="badge bg-light text-dark border">
+                                        @group.StartDate.ToString("MMM dd") - @group.EndDate.ToString("MMM dd")
+                                    </span>
+                                </div>
+                                <span class="badge bg-secondary rounded-pill">@group.Entries.Count Waiting</span>
+                            </div>
+                        </button>
+                    </h2>
+                    <div id="collapse-@group.PackageDateId" class="accordion-collapse collapse" data-bs-parent="#waitlistAccordion">
+                        <div class="accordion-body bg-light p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4">Position</th>
+                                            <th>User</th>
+                                            <th>Email</th>
+                                            <th>Joined Date</th>
+                                            <th>Amount</th>
+                                            <th class="text-end pe-4">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @{
+                                            int pos = 1;
+                                        }
+                                        @foreach (var user in group.Entries)
+                                        {
+                                            <tr>
+                                                <td class="ps-4">
+                                                    <span class="badge bg-dark rounded-circle" style="width: 25px; height: 25px; line-height: 20px;">@pos</span>
+                                                </td>
+                                                <td class="fw-bold">@user.UserName</td>
+                                                <td class="text-muted">@user.UserEmail</td>
+                                                <td class="small">@user.JoinedAt.ToString("g")</td>
+                                                <td>@user.RequestedAmount</td>
+                                                <td class="text-end pe-4">
+                                                    <form asp-action="RemoveFromWaitlist" method="post" onsubmit="return confirm('Are you sure you want to remove @user.UserName from this list?');">
+                                                        <input type="hidden" name="waitlistId" value="@user.WaitlistId" />
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove User">
+                                                            <i class="bi bi-trash"></i> Remove
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            pos++;
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

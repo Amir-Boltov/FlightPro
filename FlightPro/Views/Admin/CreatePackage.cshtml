@@ -20,24 +20,36 @@
                 <h5 class="text-black mb-3">1. Basic Information</h5>
 
                 <div class="row">
-                    <div class="col-md-8 mb-3">
+                    <div class="col-md-12 mb-3">
                         <label class="form-label fw-bold">Package Title <span class="text-danger">*</span></label>
                         <input asp-for="Title" class="form-control" placeholder="e.g., Weekend in Paris" required />
                         <span asp-validation-for="Title" class="text-danger small"></span>
                     </div>
+                </div>
 
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-bold">Destination <span class="text-danger">*</span></label>
-                        <select name="DestinationId" class="form-select" required>
-                            <option value="">-- Select City --</option>
-                            @if (ViewBag.Destinations != null)
-                            {
-                                @foreach (var dest in (List<SelectListItem>)ViewBag.Destinations)
-                                {
-                                    <option value="@dest.Value">@dest.Text</option>
-                                }
-                            }
-                        </select>
+                <div class="row bg-light p-3 rounded mb-3 mx-1">
+                    <div class="col-12 mb-2">
+                        <small class="text-muted"><i class="bi bi-info-circle"></i> Type a new location to create it automatically.</small>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Country <span class="text-danger">*</span></label>
+                        <input type="text" name="CountryName" id="countryInput"
+                               list="countryList" class="form-control"
+                               placeholder="Type or select Country..."
+                               oninput="filterCities()" required autocomplete="off" />
+
+                        <datalist id="countryList"></datalist>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">City <span class="text-danger">*</span></label>
+                        <input type="text" name="CityName" id="cityInput"
+                               list="cityList" class="form-control"
+                               placeholder="Type or select City..."
+                               required autocomplete="off" />
+
+                        <datalist id="cityList"></datalist>
                     </div>
                 </div>
 
@@ -65,49 +77,130 @@
                     </div>
 
                     <div class="col-md-3 mb-3">
-                        <label asp-for="ExpiryMinutes" class="form-label fw-bold">Cart/WL Hold <span class="text-danger">*</span></label>
+                        <label asp-for="ExpiryMinutes" class="form-label fw-bold">Hold Time <span class="text-danger">*</span></label>
                         <input asp-for="ExpiryMinutes" class="form-control" required type="number" min="1" value="15" />
-                        <span asp-validation-for="ExpiryMinutes" class="text-danger small"></span>
-                        <div class="form-text">Minutes (Default: 15)</div>
+                        <div class="form-text">Minutes</div>
                     </div>
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Description <span class="text-danger">*</span></label>
                     <textarea asp-for="Description" class="form-control" rows="4" required></textarea>
-                    <span asp-validation-for="Description" class="text-danger small"></span>
                 </div>
 
                 <hr class="my-4" />
 
                 <h5 class="text-black mb-3">2. Images</h5>
 
-                <div class="mb-3">
+                <div class="mb-4">
                     <label class="form-label fw-bold">Main Image URL <span class="text-danger">*</span></label>
-                    <input asp-for="MainImageUrl" class="form-control" placeholder="https://..." required />
-                    <span asp-validation-for="MainImageUrl" class="text-danger small"></span>
+                    <input asp-for="MainImageUrl" class="form-control mb-2"
+                           placeholder="https://..." required
+                           oninput="updatePreview(this, 'previewMain', 'containerMain')" />
+
+                    <div id="containerMain" class="p-2 bg-light border rounded text-center"
+                         style="display: @(string.IsNullOrEmpty(Model.MainImageUrl) ? "none" : "block");">
+                        <img id="previewMain" src="@Model.MainImageUrl"
+                             class="img-fluid rounded shadow-sm"
+                             style="max-height: 300px; width: auto;"
+                             onerror="hideContainer('containerMain')" />
+                    </div>
                 </div>
 
                 <div class="row">
                     <div class="col-md-4 mb-3">
-                        <label class="form-label small">Extra Image 1 (Optional)</label>
-                        <input asp-for="ImageUrl2" class="form-control form-control-sm" />
+                        <label class="form-label small">Extra Image 1</label>
+                        <input asp-for="ImageUrl2" class="form-control form-control-sm mb-2"
+                               oninput="updatePreview(this, 'preview2', 'container2')" />
+                        <div id="container2" style="display:none;" class="p-1 bg-light border rounded text-center">
+                            <img id="preview2" class="img-fluid rounded" style="max-height:150px;" onerror="hideContainer('container2')" />
+                        </div>
                     </div>
                     <div class="col-md-4 mb-3">
-                        <label class="form-label small">Extra Image 2 (Optional)</label>
-                        <input asp-for="ImageUrl3" class="form-control form-control-sm" />
+                        <label class="form-label small">Extra Image 2</label>
+                        <input asp-for="ImageUrl3" class="form-control form-control-sm mb-2"
+                               oninput="updatePreview(this, 'preview3', 'container3')" />
+                        <div id="container3" style="display:none;" class="p-1 bg-light border rounded text-center">
+                            <img id="preview3" class="img-fluid rounded" style="max-height:150px;" onerror="hideContainer('container3')" />
+                        </div>
                     </div>
                     <div class="col-md-4 mb-3">
-                        <label class="form-label small">Extra Image 3 (Optional)</label>
-                        <input asp-for="ImageUrl4" class="form-control form-control-sm" />
+                        <label class="form-label small">Extra Image 3</label>
+                        <input asp-for="ImageUrl4" class="form-control form-control-sm mb-2"
+                               oninput="updatePreview(this, 'preview4', 'container4')" />
+                        <div id="container4" style="display:none;" class="p-1 bg-light border rounded text-center">
+                            <img id="preview4" class="img-fluid rounded" style="max-height:150px;" onerror="hideContainer('container4')" />
+                        </div>
                     </div>
                 </div>
 
                 <div class="d-grid gap-2 mt-4">
                     <button type="submit" class="btn btn-success btn-lg">Create Package & Continue</button>
                 </div>
-
             </form>
         </div>
     </div>
 </div>
+
+<script>
+    // --- 1. Destination Logic (Datalist) ---
+
+    // Parse the JSON data passed from the controller
+    var allDestinations = @Html.Raw(ViewBag.DestinationsJson ?? "[]");
+
+    document.addEventListener("DOMContentLoaded", function() {
+        populateCountries();
+    });
+
+    function populateCountries() {
+        var countryList = document.getElementById("countryList");
+
+        // Get unique countries
+        var countries = [...new Set(allDestinations.map(d => d.Country))];
+
+        countryList.innerHTML = "";
+        countries.forEach(country => {
+            var option = document.createElement("option");
+            option.value = country; // This is what shows up in the list
+            countryList.appendChild(option);
+        });
+    }
+
+    function filterCities() {
+        var countryInput = document.getElementById("countryInput");
+        var cityList = document.getElementById("cityList");
+        var cityInput = document.getElementById("cityInput");
+
+        var selectedCountry = countryInput.value;
+
+        // Clear existing cities options
+        cityList.innerHTML = "";
+
+        // Filter destinations by the selected country
+        // (If the user types a NEW country, this array will be empty, which is fine)
+        var cities = allDestinations.filter(d => d.Country.toLowerCase() === selectedCountry.toLowerCase());
+
+        cities.forEach(dest => {
+            var option = document.createElement("option");
+            option.value = dest.Name;
+            cityList.appendChild(option);
+        });
+    }
+
+    // --- 2. Image Preview Logic ---
+    function updatePreview(input, imgId, containerId) {
+        var img = document.getElementById(imgId);
+        var container = document.getElementById(containerId);
+        var url = input.value;
+        if (url) {
+            img.src = url;
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+    }
+
+    function hideContainer(containerId) {
+        document.getElementById(containerId).style.display = 'none';
+    }
+</script>

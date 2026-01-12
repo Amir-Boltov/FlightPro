@@ -15,12 +15,28 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">Start Date</label>
-                            <input type="date" name="startDate" class="form-control" required />
+                            <input type="date" name="startDate" id="startDate"
+                                   class="form-control"
+                                   min="@DateTime.Now.ToString("yyyy-MM-dd")"
+                                   onchange="updateDates()"
+                                   required />
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">End Date</label>
-                            <input type="date" name="endDate" class="form-control" required />
+                            <input type="date" name="endDate" id="endDate"
+                                   class="form-control"
+                                   required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-danger">Last Day to Book</label>
+                            <input type="date" name="bookingEndDate" id="bookingEndDate"
+                                   class="form-control"
+                                   required />
+                            <div class="form-text">
+                                Bookings will close on this date. (Must be before the trip starts).
+                            </div>
                         </div>
 
                         <div class="row">
@@ -44,3 +60,33 @@
         </div>
     </div>
 </div>
+
+<script>
+    function updateDates() {
+        var startInput = document.getElementById('startDate');
+        var endInput = document.getElementById('endDate');
+        var bookingInput = document.getElementById('bookingEndDate');
+
+        var startDateVal = startInput.value;
+
+        if (startDateVal) {
+            // Rule A: Trip End Date cannot be before Start Date
+            endInput.min = startDateVal;
+            if (endInput.value && endInput.value < startDateVal) {
+                endInput.value = startDateVal;
+            }
+
+            // Rule B: Booking Deadline cannot be AFTER the Trip Start Date
+            // (You can't book a trip that has already left)
+            bookingInput.max = startDateVal;
+
+            // Also ensure Booking Deadline isn't in the past (today is min)
+            var today = new Date().toISOString().split('T')[0];
+            bookingInput.min = today;
+
+            if (bookingInput.value && bookingInput.value > startDateVal) {
+                bookingInput.value = startDateVal;
+            }
+        }
+    }
+</script>

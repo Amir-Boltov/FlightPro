@@ -23,7 +23,15 @@
                 <div class="row mb-3">
                     <div class="col-6">
                         <label class="form-label">Total Rooms</label>
-                        <input type="number" name="rooms" class="form-control" value="@Model.AvailableRooms" required />
+
+                        <input type="number" name="rooms" class="form-control"
+                               value="@Model.AvailableRooms"
+                               min="@Model.AvailableRooms"
+                               required />
+                        <div class="form-text text-muted" style="font-size: 0.8rem;">
+                            You can only increase capacity.
+                        </div>
+
                     </div>
                     <div class="col-6">
                         <label class="form-label">Regular Price ($)</label>

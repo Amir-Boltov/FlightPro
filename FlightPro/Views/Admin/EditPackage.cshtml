@@ -36,12 +36,19 @@
                         <div class="row">
                             <div class="col-md-3 mb-3">
                                 <label class="form-label">Category</label>
-                                <select asp-for="Category" class="form-select">
-                                    <option>Adventure</option>
-                                    <option>Relaxation</option>
-                                    <option>History</option>
-                                    <option>Family</option>
-                                </select>
+
+                                <input asp-for="Category" class="form-control" list="categoryOptions"
+                                       placeholder="Type new or select..." autocomplete="off" />
+
+                                <datalist id="categoryOptions">
+                                    @if (ViewBag.Categories != null)
+                                    {
+                                        foreach (var cat in ViewBag.Categories)
+                                        {
+                                            <option value="@cat"></option>
+                                        }
+                                    }
+                                </datalist>
                             </div>
 
                             <div class="col-md-3 mb-3">
