@@ -54,6 +54,7 @@ public class TripsController : Controller
             viewModel.AllCities = GetDistinctColumn(conn, "Destinations", "Name"); // Assuming 'Name' is city
             viewModel.AllCategories = GetDistinctColumn(conn, "Packages", "Category");
 
+
             // 2. Build the Main Query
             string sql = @"
                 SELECT 

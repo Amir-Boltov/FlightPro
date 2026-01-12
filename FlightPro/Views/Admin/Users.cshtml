@@ -1,85 +1,420 @@
 ﻿@model List<FlightPro.Models.UserViewModel>
 @{
     ViewData["Title"] = "User Management";
+
+    // Quick calculations for the top cards
+    var totalUsers = Model.Count;
+    var activeUsers = Model.Count(u => u.Status == "Active");
+    var adminsCount = Model.Count(u => u.Role == "Admin");
+    var customersCount = totalUsers - adminsCount;
 }
 
-<div class="container-fluid px-4 mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>User Management</h2>
-        <div class="d-flex gap-2">
-            <form method="get" class="d-flex">
-                <input type="text" name="searchQuery" class="form-control me-2"
-                       placeholder="Search name/email..." value="@ViewBag.CurrentSearch">
-                <button type="submit" class="btn btn-outline-primary">Search</button>
-            </form>
-            <a asp-action="CreateUser" class="btn btn-success text-nowrap">Add User</a>
-        </div>
-    </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    @if (TempData["Success"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show">
-            @TempData["Success"] <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
+<style>
+    /* --- General Styles (Same as Reference) --- */
+    body {
+        background-color: #f8f9fa;
     }
 
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <table class="table table-hover mb-0 align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th class="ps-4">Name</th>
-                        <th>Email</th>
-                        <th>Status</th>
-                        <th>Role</th>
-                        <th class="text-end pe-4">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var user in Model)
-                    {
-                        <tr>
-                            <td class="ps-4 fw-bold">@user.FullName</td>
-                            <td>@user.Email</td>
-                            <td>
-                                @if (user.Status == "Active")
-                                {
-                                    <span class="badge bg-success">Active</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-warning text-dark">@user.Status</span>
-                                }
-                            </td>
-                            <td>
-                                @if (user.Role == "Admin")
-                                {
-                                    <span class="badge bg-primary">Admin</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">Customer</span>
-                                }
-                            </td>
-                            <td class="text-end pe-4">
-                                <a asp-action="UserDetails" asp-route-id="@user.Id" class="btn btn-sm btn-outline-primary me-1">Manage</a>
+    .sidebar {
+        min-height: 100vh;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+        background: #fff;
+    }
 
-                                <form asp-action="ToggleRole" method="post" class="d-inline">
-                                    <input type="hidden" name="id" value="@user.Id" />
-                                    @if (user.Role == "Admin")
-                                    {
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Demote to Customer?');">Demote</button>
-                                    }
-                                    else
-                                    {
-                                        <button type="submit" class="btn btn-sm btn-outline-success" onclick="return confirm('Promote to Admin?');">Promote</button>
-                                    }
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+    .nav-link {
+        color: #333;
+        font-weight: 500;
+        padding: 10px 15px;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+
+        .nav-link:hover {
+            background-color: #f8f9fa;
+            color: #0d6efd;
+        }
+
+        .nav-link.active {
+            background-color: #e9ecef;
+            color: #0d6efd;
+            font-weight: 700;
+        }
+
+        .nav-link i {
+            margin-right: 10px;
+            font-size: 1.1rem;
+        }
+
+    /* Stat Cards */
+    .stat-card {
+        border: none;
+        border-radius: 12px;
+        transition: transform 0.2s;
+    }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+
+    /* Chart */
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+
+    /* Table */
+    .table-container {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .table thead th {
+        background-color: #212529;
+        color: #fff;
+        border: none;
+        font-weight: 600;
+        padding: 15px;
+    }
+
+    .table tbody td {
+        padding: 15px;
+        vertical-align: middle;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    /* Action Buttons */
+    .action-btn {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        transition: all 0.2s ease;
+        margin-left: 5px;
+        font-size: 0.9rem;
+        text-decoration: none !important;
+    }
+
+    .btn-view {
+        background-color: #e6f8f0;
+        color: #00b074;
+    }
+
+        .btn-view:hover {
+            background-color: #00b074;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+    .btn-role {
+        background-color: #eef2ff;
+        color: #4361ee;
+    }
+
+        .btn-role:hover {
+            background-color: #4361ee;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+    /* Search Box */
+    .search-box {
+        position: relative;
+    }
+
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #aaa;
+        }
+
+        .search-box input {
+            padding-left: 45px;
+            border-radius: 50px;
+        }
+
+    /* User Avatar Specific */
+    .avatar-circle {
+        width: 35px;
+        height: 35px;
+        background-color: #e9ecef;
+        color: #495057;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 10px;
+        font-size: 0.8rem;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse show">
+            <div class="position-sticky pt-3">
+                <div class="text-center mb-4">
+                    <h5 class="fw-bold">Admin Panel</h5>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" asp-action="Index" asp-controller="Admin">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" asp-action="Packages">
+                            <i class="bi bi-box-seam"></i> Manage Packages
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link active" asp-action="Users">
+                            <i class="bi bi-people"></i> Manage Users
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="#">
+                            <i class="bi bi-list-check"></i> Waiting Lists
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 bg-light min-vh-100">
+
+            <div class="pt-4 pb-2 mb-3 border-bottom d-flex justify-content-between align-items-center">
+                <h2 class="h2">Manage Users</h2>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-lg-4">
+                    <div class="row g-3 h-100">
+                        <div class="col-12">
+                            <div class="card stat-card shadow-sm bg-primary text-white h-100">
+                                <div class="card-body d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <h6 class="opacity-75">Total Users</h6>
+                                        <h3 class="fw-bold mb-0">@totalUsers</h3>
+                                    </div>
+                                    <i class="bi bi-people fs-1 opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="card stat-card shadow-sm bg-success text-white h-100">
+                                <div class="card-body d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <h6 class="opacity-75">Active Users</h6>
+                                        <h3 class="fw-bold mb-0">@activeUsers</h3>
+                                    </div>
+                                    <i class="bi bi-person-check fs-1 opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="card stat-card shadow-sm bg-dark text-white h-100">
+                                <div class="card-body d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <h6 class="opacity-75">Administrators</h6>
+                                        <h3 class="fw-bold mb-0">@adminsCount</h3>
+                                    </div>
+                                    <i class="bi bi-shield-lock fs-1 opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="card shadow-sm border-0 rounded-3 h-100">
+                        <div class="card-header bg-white py-3">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart-fill me-2 text-primary"></i>User Distribution (Role)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="usersChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4 align-items-center">
+                <div class="col-md-6">
+                    <div class="search-box">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="userSearchInput" class="form-control" placeholder="Search by name or email...">
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <a asp-action="CreateUser" class="btn btn-warning fw-bold shadow-sm rounded-pill px-4">
+                        <i class="bi bi-plus-lg me-1"></i> Add New User
+                    </a>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">User</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in Model)
+                            {
+                                // Initials calculation
+                                var initials = string.Join("", user.FullName.Split(' ').Select(s => s[0])).ToUpper();
+                                if (initials.Length > 2) initials = initials.Substring(0, 2);
+
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-circle">@initials</div>
+                                            <span class="fw-bold text-dark">@user.FullName</span>
+                                        </div>
+                                    </td>
+                                    <td><span class="text-muted">@user.Email</span></td>
+                                    <td>
+                                        @if (user.Role == "Admin")
+                                        {
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">Admin</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary border">Customer</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (user.Status == "Active")
+                                        {
+                                            <span class="text-success fw-bold"><i class="bi bi-dot"></i> Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-warning fw-bold"><i class="bi bi-dot"></i> @user.Status</span>
+                                        }
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="d-flex justify-content-end">
+                                            <a asp-action="UserDetails" asp-route-id="@user.Id" class="action-btn btn-view" data-bs-toggle="tooltip" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+
+                                            <form asp-action="ToggleRole" method="post" class="d-inline">
+                                                <input type="hidden" name="id" value="@user.Id" />
+                                                @if (user.Role == "Admin")
+                                                {
+                                                    <button type="submit" class="action-btn btn-role" data-bs-toggle="tooltip" title="Demote to Customer" onclick="return confirm('Demote this user?');">
+                                                        <i class="bi bi-arrow-down"></i>
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button type="submit" class="action-btn btn-role" data-bs-toggle="tooltip" title="Promote to Admin" onclick="return confirm('Promote this user?');">
+                                                        <i class="bi bi-arrow-up"></i>
+                                                    </button>
+                                                }
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <div id="noResultsMsg" class="text-center py-5 d-none">
+                        <i class="bi bi-search display-6 text-muted mb-3"></i>
+                        <h5 class="text-muted">No users found.</h5>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 </div>
+
+<script>
+    // --- Chart Script ---
+    document.addEventListener("DOMContentLoaded", function() {
+        var ctx = document.getElementById('usersChart').getContext('2d');
+
+        // Data from Razor
+        var adminCount = @adminsCount;
+        var customerCount = @customersCount;
+
+        var myChart = new Chart(ctx, {
+            type: 'bar', // Using Bar to match your previous design preference
+            data: {
+                labels: ['Administrators', 'Customers'],
+                datasets: [{
+                    label: 'User Count',
+                    data: [adminCount, customerCount],
+                    backgroundColor: [
+                        'rgba(33, 37, 41, 0.8)', // Dark for Admin
+                        'rgba(13, 110, 253, 0.7)' // Blue for Customer
+                    ],
+                    borderColor: [
+                        'rgba(33, 37, 41, 1)',
+                        'rgba(13, 110, 253, 1)'
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 5,
+                    barPercentage: 0.5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    });
+
+    // --- Tooltip & Search Scripts ---
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) })
+
+    document.getElementById('userSearchInput').addEventListener('keyup', function() {
+        var searchValue = this.value.toLowerCase();
+        var tableRows = document.querySelectorAll('#usersTable tbody tr');
+        var hasVisibleRows = false;
+
+        tableRows.forEach(function(row) {
+            var rowText = row.textContent.toLowerCase();
+            if (rowText.includes(searchValue)) {
+                row.style.display = '';
+                hasVisibleRows = true;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        var noResultsDiv = document.getElementById('noResultsMsg');
+        hasVisibleRows ? noResultsDiv.classList.add('d-none') : noResultsDiv.classList.remove('d-none');
+    });
+</script>

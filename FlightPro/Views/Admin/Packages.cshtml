@@ -1,51 +1,377 @@
-﻿@model List<FlightPro.Models.PackageModel>
+﻿@model FlightPro.Models.AdminDashboardViewModel
 @{
-    ViewData["Title"] = "Package Managment";
+    ViewData["Title"] = "Package Management";
+
+    // חישובים מהירים לכרטיסים למעלה
+    var totalPackages = Model.AllPackages.Count;
+    var totalDestinations = Model.AllPackages.Select(x => x.Destination).Distinct().Count();
+    var categoriesCount = Model.AllPackages.Select(x => x.Category).Distinct().Count();
 }
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Manage Travel Packages</h2>
-        <a asp-action="CreatePackage" class="btn btn-warning">
-            <i class="bi bi-plus-circle"></i> Add New Package
-        </a>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    /* --- עיצוב כללי --- */
+    body {
+        background-color: #f8f9fa;
+    }
+
+    .sidebar {
+        min-height: 100vh;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+        background: #fff;
+    }
+
+    .nav-link {
+        color: #333;
+        font-weight: 500;
+        padding: 10px 15px;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+
+        .nav-link:hover {
+            background-color: #f8f9fa;
+            color: #0d6efd;
+        }
+
+        .nav-link.active {
+            background-color: #e9ecef;
+            color: #0d6efd;
+            font-weight: 700;
+        }
+
+        .nav-link i {
+            margin-right: 10px;
+            font-size: 1.1rem;
+        }
+
+    /* כרטיסי סטטיסטיקה */
+    .stat-card {
+        border: none;
+        border-radius: 12px;
+        transition: transform 0.2s;
+    }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+
+    /* גרף */
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+
+    /* טבלה */
+    .table-container {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .table thead th {
+        background-color: #212529;
+        color: #fff;
+        border: none;
+        font-weight: 600;
+        padding: 15px;
+    }
+
+    .table tbody td {
+        padding: 15px;
+        vertical-align: middle;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    /* כפתורי פעולה */
+    .action-btn {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        transition: all 0.2s ease;
+        margin-left: 5px;
+        font-size: 0.9rem;
+        text-decoration: none !important;
+    }
+
+    .btn-add-date {
+        background-color: #e6f8f0;
+        color: #00b074;
+    }
+
+        .btn-add-date:hover {
+            background-color: #00b074;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+    .btn-edit {
+        background-color: #eef2ff;
+        color: #4361ee;
+    }
+
+        .btn-edit:hover {
+            background-color: #4361ee;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+    .btn-delete {
+        background-color: #fff0f0;
+        color: #ff4d4f;
+    }
+
+        .btn-delete:hover {
+            background-color: #ff4d4f;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+    .search-box {
+        position: relative;
+    }
+
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #aaa;
+        }
+
+        .search-box input {
+            padding-left: 45px;
+            border-radius: 50px;
+        }
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse show">
+            <div class="position-sticky pt-3">
+                <div class="text-center mb-4">
+                    <h5 class="fw-bold">Admin Panel</h5>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" asp-action="Index" asp-controller="Admin">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link active" asp-action="Packages">
+                            <i class="bi bi-box-seam"></i> Manage Packages
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" asp-action="Users">
+                            <i class="bi bi-people"></i> Manage Users
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" href="#">
+                            <i class="bi bi-list-check"></i> Waiting Lists
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 bg-light min-vh-100">
+
+            <div class="pt-4 pb-2 mb-3 border-bottom d-flex justify-content-between align-items-center">
+                <h2 class="h2">Manage Travel Packages</h2>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-lg-4">
+                    <div class="row g-3 h-100">
+                        <div class="col-12">
+                            <div class="card stat-card shadow-sm bg-primary text-white h-100">
+                                <div class="card-body d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <h6 class="opacity-75">Total Packages</h6>
+                                        <h3 class="fw-bold mb-0">@totalPackages</h3>
+                                    </div>
+                                    <i class="bi bi-box-seam fs-1 opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="card stat-card shadow-sm bg-success text-white h-100">
+                                <div class="card-body d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <h6 class="opacity-75">Destinations</h6>
+                                        <h3 class="fw-bold mb-0">@totalDestinations</h3>
+                                    </div>
+                                    <i class="bi bi-geo-alt fs-1 opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="card stat-card shadow-sm bg-warning text-dark h-100">
+                                <div class="card-body d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <h6 class="opacity-75">Categories</h6>
+                                        <h3 class="fw-bold mb-0">@categoriesCount</h3>
+                                    </div>
+                                    <i class="bi bi-tags fs-1 opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="card shadow-sm border-0 rounded-3 h-100">
+                        <div class="card-header bg-white py-3">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart-fill me-2 text-primary"></i>Top 5 Best Selling Packages</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="packagesChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4 align-items-center">
+                <div class="col-md-6">
+                    <div class="search-box">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="packageSearchInput" class="form-control" placeholder="Search by name, city, country or category...">
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <a asp-action="CreatePackage" class="btn btn-warning fw-bold shadow-sm rounded-pill px-4">
+                        <i class="bi bi-plus-lg me-1"></i> Add New Package
+                    </a>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="packagesTable">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">ID</th>
+                                <th>Title</th>
+                                <th>Location</th>
+                                <th>Category</th>
+                                <th>Age Limit</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.AllPackages)
+                            {
+                                <tr>
+                                    <td class="ps-4 fw-bold text-muted">#@item.Id</td>
+                                    <td><span class="fw-bold text-dark">@item.Title</span></td>
+                                    <td>
+                                        <i class="bi bi-geo-alt-fill text-danger me-1"></i>
+                                        @item.Destination, @item.Country
+                                    </td>
+                                    <td><span class="badge bg-light text-dark border">@item.Category</span></td>
+                                    <td>@(item.MinAge > 0 ? item.MinAge + "+" : "All Ages")</td>
+                                    <td class="text-end pe-4">
+                                        <div class="d-flex justify-content-end">
+                                            <a asp-action="AddPackageDate" asp-route-packageId="@item.Id" class="action-btn btn-add-date" data-bs-toggle="tooltip" title="Add Date"><i class="bi bi-calendar-plus"></i></a>
+                                            <a asp-action="EditPackage" asp-route-id="@item.Id" class="action-btn btn-edit" data-bs-toggle="tooltip" title="Edit"><i class="bi bi-pencil-fill"></i></a>
+                                            <form asp-action="DeletePackage" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Are you sure?');">
+                                                <button type="submit" class="action-btn btn-delete" data-bs-toggle="tooltip" title="Delete"><i class="bi bi-trash-fill"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <div id="noResultsMsg" class="text-center py-5 d-none">
+                        <i class="bi bi-search display-6 text-muted mb-3"></i>
+                        <h5 class="text-muted">No packages found.</h5>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
-
-    <table class="table table-hover">
-        <thead class="table-dark">
-            <tr>
-                <th>ID</th>
-                <th>Title</th>
-                <th>Destination</th>
-                <th>Category</th>
-                <th>Age Limit</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var item in Model)
-            {
-                <tr>
-                    <td>@item.Id</td>
-                    <td>@item.Title</td>
-                    <td>@item.Destination, @item.Country</td>
-                    <td>@item.Category</td>
-                    <td>@(item.MinAge > 0 ? item.MinAge + "+" : "None")</td>
-                    <td>
-                        <a asp-action="AddPackageDate" asp-route-packageId="@item.Id" class="btn btn-sm btn-success me-1">
-                            <i class="bi bi-calendar-plus"></i> Add Date
-                        </a>
-                        <a asp-action="EditPackage" asp-route-id="@item.Id" class="btn btn-sm btn-outline-dark">
-                            <i class="bi bi-pencil"></i> Edit
-                        </a>
-
-                        <form asp-action="DeletePackage" asp-route-id="@item.Id" method="post" class="d-inline"
-                              onsubmit="return confirm('Are you sure? This cannot be undone.');">
-                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
 </div>
+
+<script>
+    // --- סקריפט לגרף ---
+    document.addEventListener("DOMContentLoaded", function() {
+        var ctx = document.getElementById('packagesChart').getContext('2d');
+
+        // נתונים שמגיעים מה-Controller
+        var labels = @Html.Raw(Json.Serialize(Model.TopPackageNames));
+        var data = @Html.Raw(Json.Serialize(Model.TopPackageSales));
+
+        var myChart = new Chart(ctx, {
+            type: 'bar', // גרף עמודות
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Total Sales',
+                    data: data,
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.7)', // כחול
+                        'rgba(255, 206, 86, 0.7)', // צהוב
+                        'rgba(75, 192, 192, 0.7)', // טורקיז
+                        'rgba(153, 102, 255, 0.7)', // סגול
+                        'rgba(255, 99, 132, 0.7)'  // אדום
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 5 // פינות עגולות לעמודות
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false } // הסתרת מקרא כי זה ברור
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 } // להציג רק מספרים שלמים
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    });
+
+    // --- שאר הסקריפטים (Tooltip + Search) ---
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) })
+
+    document.getElementById('packageSearchInput').addEventListener('keyup', function() {
+        var searchValue = this.value.toLowerCase();
+        var tableRows = document.querySelectorAll('#packagesTable tbody tr');
+        var hasVisibleRows = false;
+        tableRows.forEach(function(row) {
+            var rowText = row.textContent.toLowerCase();
+            if (rowText.includes(searchValue)) { row.style.display = ''; hasVisibleRows = true; }
+            else { row.style.display = 'none'; }
+        });
+        var noResultsDiv = document.getElementById('noResultsMsg');
+        hasVisibleRows ? noResultsDiv.classList.add('d-none') : noResultsDiv.classList.remove('d-none');
+    });
+</script>

@@ -14,6 +14,13 @@ namespace FlightPro.Models
         public List<BookingViewModel> RecentBookings { get; set; } = new List<BookingViewModel>();
         public List<PackageModel> Packages { get; set; } = new List<PackageModel>();
         public int WaitingListCount { get; set; }
+        public List<string> ChartLabels { get; set; }  // תאריכים
+        public List<decimal> ChartData { get; set; }
+        public List<PackageModel> AllPackages { get; set; }
+
+        // נתונים לגרף (שמות החבילות + מספר המכירות)
+        public List<string> TopPackageNames { get; set; }
+        public List<int> TopPackageSales { get; set; }
     }
 
     public class BookingViewModel
