@@ -13,12 +13,14 @@ namespace FlightPro.Controllers
         private readonly IConfiguration _configuration;
         private readonly PayPalService _payPalService;
         private readonly StripeService _stripeService;
+        private readonly BookingRuleService _bookingRuleService;
 
-        public OrderController(IConfiguration configuration, PayPalService payPalService, StripeService stripeService)
+        public OrderController(IConfiguration configuration, PayPalService payPalService, StripeService stripeService, BookingRuleService bookingRuleService)
         {
             _configuration = configuration;
             _payPalService = payPalService;
             _stripeService = stripeService;
+            _bookingRuleService = bookingRuleService;
         }
 
         // ==========================================
@@ -29,6 +31,11 @@ namespace FlightPro.Controllers
         {
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
+            if (!_bookingRuleService.CanUserBookMore(userId.Value))
+            {
+                TempData["Error"] = "Limit Reached: You cannot have more than 3 active trips (Confirmed or in Cart).";
+                return RedirectToAction("Index","Trips");
+            }
 
             // 1. Create Booking AND Deduct Stock
             int bookingId = CreateDirectBooking(userId.Value, packageId, packageDateId, amount);
@@ -53,6 +60,16 @@ namespace FlightPro.Controllers
         {
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
+            int confirmed = _bookingRuleService.GetConfirmedTripsCount(userId.Value);
+            int cartCount = _bookingRuleService.GetCartCount(userId.Value);
+            int total = confirmed + cartCount;
+            if (total > 3)
+            {
+                int excess = total - 3;
+                TempData["Error"] = $"Action Blocked: You have {confirmed} confirmed trips and {cartCount} in your cart. The limit is 3. Please remove {excess} item(s) before proceeding.";
+
+                return RedirectToAction("Index", "MyBook");
+            }
 
             List<myBook> cartItems = new List<myBook>();
             decimal grandTotal = 0;
@@ -148,8 +165,20 @@ namespace FlightPro.Controllers
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
 
+            // 1. CRITICAL CHECK: Does the booking still exist?
+            // If the cleanup job ran 1 second ago, GetTotalAmount will return 0.
             decimal totalAmount = GetTotalAmount(userId.Value, bookingId);
-            if (totalAmount == 0) return RedirectToAction("Index", "MyBook");
+
+            if (totalAmount == 0)
+            {
+                TempData["Error"] = "We are sorry, but your reservation time has expired. The items were removed from your cart.";
+                return RedirectToAction("Index", "Trips"); // Or redirect to Cart
+            }
+            if (_bookingRuleService.GetTotalActiveTrips(userId.Value) > 3)
+            {
+                TempData["Error"] = "Transaction blocked: You have exceeded the limit of 3 active trips.";
+                return RedirectToAction("Index","Trips");
+            }
 
             string returnUrl = Url.Action("PayPalCallback", "Order", new { bookingId = bookingId }, Request.Scheme);
             string cancelUrl = Url.Action("Checkout", "Order", new { bookingId = bookingId }, Request.Scheme);
@@ -159,8 +188,9 @@ namespace FlightPro.Controllers
                 string approvalUrl = await _payPalService.CreateOrder(totalAmount, returnUrl, cancelUrl);
                 return Redirect(approvalUrl);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                TempData["Error"] = "Error connecting to PayPal: " + ex.Message;
                 return RedirectToAction("Checkout", new { bookingId = bookingId });
             }
         }
@@ -174,9 +204,20 @@ namespace FlightPro.Controllers
 
             if (!string.IsNullOrEmpty(transactionId))
             {
-                // ONE method handles both cases now
-                MarkAsPaid(userId.Value, transactionId, bookingId);
-                return RedirectToAction("Success");
+                // Check if the update actually succeeded
+                bool success = MarkAsPaid(userId.Value, transactionId, bookingId);
+
+                if (success)
+                {
+                    return RedirectToAction("Success");
+                }
+                else
+                {
+                    // EDGE CASE: User paid, but Timer deleted the booking 2 seconds ago.
+                    // In a real app, you would log this to a "RefundQueue" table.
+                    TempData["Error"] = "Payment successful, but your reservation expired just now. Please contact support with Transaction ID: " + transactionId;
+                    return RedirectToAction("Index", "Trips");
+                }
             }
 
             return RedirectToAction("Checkout", new { bookingId = bookingId });
@@ -191,19 +232,34 @@ namespace FlightPro.Controllers
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
 
+            // 1. CRITICAL CHECK: Does the booking still exist?
             decimal totalAmount = GetTotalAmount(userId.Value, bookingId);
-            if (totalAmount == 0) return RedirectToAction("Index", "MyBook");
+
+            if (totalAmount == 0)
+            {
+                TempData["Error"] = "We are sorry, but your reservation time has expired. The items were removed from your cart.";
+                return RedirectToAction("Index", "Trips");
+            }
+            if (_bookingRuleService.GetTotalActiveTrips(userId.Value) > 3)
+            {
+                TempData["Error"] = "Transaction blocked: You have exceeded the limit of 3 active trips.";
+                return RedirectToAction("Index","Trips");
+            }
 
             string returnUrl = Url.Action("StripeCallback", "Order", new { bookingId = bookingId }, Request.Scheme);
-
-            // Fix URL formatting
             returnUrl += returnUrl.Contains("?") ? "&session_id={CHECKOUT_SESSION_ID}" : "?session_id={CHECKOUT_SESSION_ID}";
-
             string cancelUrl = Url.Action("Checkout", "Order", new { bookingId = bookingId }, Request.Scheme);
 
-            string paymentUrl = _stripeService.CreateCheckoutSession(totalAmount, returnUrl, cancelUrl);
-
-            return Redirect(paymentUrl);
+            try
+            {
+                string paymentUrl = _stripeService.CreateCheckoutSession(totalAmount, returnUrl, cancelUrl);
+                return Redirect(paymentUrl);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Error connecting to Stripe: " + ex.Message;
+                return RedirectToAction("Checkout", new { bookingId = bookingId });
+            }
         }
 
         public IActionResult StripeCallback(string session_id, int? bookingId)
@@ -211,17 +267,21 @@ namespace FlightPro.Controllers
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
 
-            if (string.IsNullOrEmpty(session_id))
-            {
-                return RedirectToAction("Checkout", new { bookingId = bookingId });
-            }
+            if (string.IsNullOrEmpty(session_id)) return RedirectToAction("Checkout", new { bookingId = bookingId });
 
             string cleanTxId = session_id.Contains("?") ? session_id.Split('?')[0] : session_id;
 
-            // ONE method handles both cases now
-            MarkAsPaid(userId.Value, cleanTxId, bookingId);
+            bool success = MarkAsPaid(userId.Value, cleanTxId, bookingId);
 
-            return RedirectToAction("Success");
+            if (success)
+            {
+                return RedirectToAction("Success");
+            }
+            else
+            {
+                TempData["Error"] = "Payment successful, but your reservation expired just now. Please contact support with Transaction ID: " + cleanTxId;
+                return RedirectToAction("Index", "Trips");
+            }
         }
 
         public IActionResult Success()
@@ -330,23 +390,24 @@ namespace FlightPro.Controllers
             return newId;
         }
 
-        private void MarkAsPaid(int userId, string txId, int? specificBookingId)
+        // Change 'void' to 'bool'
+        private bool MarkAsPaid(int userId, string txId, int? specificBookingId)
         {
             using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
             {
                 conn.Open();
                 string sql = @"
-                    UPDATE Bookings 
-                    SET IsPaid = 1, 
-                        Status = 'Confirmed', 
-                        TransactionId = @TxId, 
-                        CreatedAt = GETDATE() 
-                    WHERE UserId = @UserId 
-                    AND (
-                        (@SpecificId IS NOT NULL AND Id = @SpecificId)
-                        OR 
-                        (@SpecificId IS NULL AND Status = 'InCart')
-                    )";
+            UPDATE Bookings 
+            SET IsPaid = 1, 
+                Status = 'Confirmed', 
+                TransactionId = @TxId, 
+                CreatedAt = GETDATE() 
+            WHERE UserId = @UserId 
+            AND (
+                (@SpecificId IS NOT NULL AND Id = @SpecificId)
+                OR 
+                (@SpecificId IS NULL AND Status = 'InCart')
+            )";
 
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
@@ -354,7 +415,10 @@ namespace FlightPro.Controllers
                     cmd.Parameters.AddWithValue("@TxId", txId ?? "N/A");
                     cmd.Parameters.AddWithValue("@SpecificId", specificBookingId.HasValue ? (object)specificBookingId.Value : DBNull.Value);
 
-                    cmd.ExecuteNonQuery();
+                    int rowsAffected = cmd.ExecuteNonQuery();
+
+                    // If 0 rows were updated, it means the booking expired DURING the payment process
+                    return rowsAffected > 0;
                 }
             }
         }

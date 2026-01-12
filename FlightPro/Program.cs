@@ -15,6 +15,8 @@ builder.Services.AddSession(options =>
 });
 builder.Services.AddScoped<PayPalService>();
 builder.Services.AddScoped<StripeService>();
+builder.Services.AddScoped<WaitlistService>();
+builder.Services.AddScoped<BookingRuleService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

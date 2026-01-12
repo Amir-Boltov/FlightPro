@@ -9,10 +9,12 @@ using System.Linq;
 public class TripsController : Controller
 {
     private readonly IConfiguration _configuration;
+    private readonly WaitlistService _waitlistService;
 
-    public TripsController(IConfiguration configuration)
+    public TripsController(IConfiguration configuration, WaitlistService waitlistService)
     {
         _configuration = configuration;
+        _waitlistService = waitlistService;
     }
 
     public IActionResult Index(
@@ -178,6 +180,7 @@ public class TripsController : Controller
     {
         PackageModel package = null;
         string connectionString = _configuration.GetConnectionString("myConnect");
+        _waitlistService.CleanupAndPromoteForPackage(id);
 
         using (SqlConnection conn = new SqlConnection(connectionString))
         {
