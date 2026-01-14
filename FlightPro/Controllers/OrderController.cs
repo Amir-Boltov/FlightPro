@@ -14,13 +14,15 @@ namespace FlightPro.Controllers
         private readonly PayPalService _payPalService;
         private readonly StripeService _stripeService;
         private readonly BookingRuleService _bookingRuleService;
+        private readonly EmailService _emailService;
 
-        public OrderController(IConfiguration configuration, PayPalService payPalService, StripeService stripeService, BookingRuleService bookingRuleService)
+        public OrderController(IConfiguration configuration, PayPalService payPalService, StripeService stripeService, BookingRuleService bookingRuleService, EmailService emailService)
         {
             _configuration = configuration;
             _payPalService = payPalService;
             _stripeService = stripeService;
             _bookingRuleService = bookingRuleService;
+            _emailService = emailService;
         }
 
         // ==========================================
@@ -209,12 +211,11 @@ namespace FlightPro.Controllers
 
                 if (success)
                 {
+                    await SendBookingConfirmation(userId.Value, transactionId);
                     return RedirectToAction("Success");
                 }
                 else
                 {
-                    // EDGE CASE: User paid, but Timer deleted the booking 2 seconds ago.
-                    // In a real app, you would log this to a "RefundQueue" table.
                     TempData["Error"] = "Payment successful, but your reservation expired just now. Please contact support with Transaction ID: " + transactionId;
                     return RedirectToAction("Index", "Trips");
                 }
@@ -262,7 +263,7 @@ namespace FlightPro.Controllers
             }
         }
 
-        public IActionResult StripeCallback(string session_id, int? bookingId)
+        public async Task<IActionResult> StripeCallback(string session_id, int? bookingId)
         {
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
@@ -271,14 +272,19 @@ namespace FlightPro.Controllers
 
             string cleanTxId = session_id.Contains("?") ? session_id.Split('?')[0] : session_id;
 
+
             bool success = MarkAsPaid(userId.Value, cleanTxId, bookingId);
 
             if (success)
             {
+
+                await SendBookingConfirmation(userId.Value, cleanTxId);
+
                 return RedirectToAction("Success");
             }
             else
             {
+                // Edge case: Payment succeeded, but the database update failed (likely timer expiry)
                 TempData["Error"] = "Payment successful, but your reservation expired just now. Please contact support with Transaction ID: " + cleanTxId;
                 return RedirectToAction("Index", "Trips");
             }
@@ -308,7 +314,7 @@ namespace FlightPro.Controllers
                 else
                 {
                     // Case B: Full Cart
-                    sql = "SELECT SUM(TotalPrice) FROM Bookings WHERE UserId = @UserId AND Status = 'InCart'";
+                    sql = "SELECT SUM(TotalPrice) FROM Bookings WHERE UserId = @UserId AND Status IN ('InCart', 'Reserved')";
                 }
 
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
@@ -406,7 +412,7 @@ namespace FlightPro.Controllers
             AND (
                 (@SpecificId IS NOT NULL AND Id = @SpecificId)
                 OR 
-                (@SpecificId IS NULL AND Status = 'InCart')
+                (@SpecificId IS NULL AND Status IN ('InCart', 'Reserved'))
             )";
 
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
@@ -420,6 +426,75 @@ namespace FlightPro.Controllers
                     // If 0 rows were updated, it means the booking expired DURING the payment process
                     return rowsAffected > 0;
                 }
+            }
+        }
+        private async Task SendBookingConfirmation(int userId, string transactionId)
+        {
+            string userEmail = "";
+            string firstName = "";
+            var bookedItems = new List<string>();
+            decimal grandTotal = 0;
+
+            using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
+            {
+                conn.Open();
+
+                // This query gets the User details AND the Items associated with this specific transaction
+                string sql = @"
+            SELECT u.Email, u.FirstName, 
+                   p.Title, 
+                   bd.StartDate, bd.EndDate,
+                   b.Amount, b.TotalPrice
+            FROM Bookings b
+            JOIN Users u ON b.UserId = u.Id
+            JOIN Packages p ON b.PackageId = p.Id
+            JOIN PackageDates bd ON b.PackageDateId = bd.Id
+            WHERE b.UserId = @UserId AND b.TransactionId = @TxId";
+
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    cmd.Parameters.AddWithValue("@TxId", transactionId);
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            userEmail = reader["Email"].ToString();
+                            firstName = reader["FirstName"].ToString();
+                            string title = reader["Title"].ToString();
+                            DateTime start = (DateTime)reader["StartDate"];
+                            DateTime end = (DateTime)reader["EndDate"];
+                            int amount = (int)reader["Amount"];
+                            decimal price = (decimal)reader["TotalPrice"];
+
+                            grandTotal += price;
+
+                            string itemLine = $"<li><strong>{title}</strong><br>" +
+                                              $"Dates: {start:MMM dd} - {end:MMM dd, yyyy}<br>" +
+                                              $"Tickets: {amount} | Price: {price:C}</li>";
+                            bookedItems.Add(itemLine);
+                        }
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(userEmail) && bookedItems.Count > 0)
+            {
+                string emailBody = $@"
+            <h2>Booking Confirmed!</h2>
+            <p>Hi {firstName},</p>
+            <p>Thank you for booking with FlightPro. We have received your payment.</p>
+            <h3>Order Summary (Tx: {transactionId})</h3>
+            <ul>
+                {string.Join("", bookedItems)}
+            </ul>
+            <p><strong>Total Paid: {grandTotal:C}</strong></p>
+            <hr>
+            <p>You can view your trip details anytime in the 'Bookings' section of our website.</p>
+            <p>Safe Travels,<br>The FlightPro Team</p>";
+
+                await _emailService.SendEmailAsync(userEmail, "FlightPro - Booking Confirmation", emailBody);
             }
         }
     }

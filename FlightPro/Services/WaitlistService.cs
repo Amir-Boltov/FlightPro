@@ -6,10 +6,12 @@ using System.Collections.Generic;
 public class WaitlistService
 {
     private readonly string _connectionString;
+    private readonly EmailService _emailService;
 
-    public WaitlistService(IConfiguration configuration)
+    public WaitlistService(IConfiguration configuration, EmailService emailService)
     {
         _connectionString = configuration.GetConnectionString("myConnect");
+        _emailService = emailService;
     }
 
     public void CleanupAndPromoteForPackage(int packageId)
@@ -99,16 +101,22 @@ public class WaitlistService
         }
     }
 
-    public void TryPromoteFromWaitlist(int packageDateId)
+    public async Task TryPromoteFromWaitlist(int packageDateId)
     {
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             conn.Open();
             using (SqlTransaction transaction = conn.BeginTransaction())
             {
+                // Variables to store user info for the email
+                string userEmail = null;
+                string userName = null;
+                string packageTitle = null;
+                bool promotionSuccess = false;
+
                 try
                 {
-                    // 1. Double Check Stock (It might have changed in milliseconds)
+                    // 1. Double Check Stock
                     int currentStock = 0;
                     string checkStockSql = "SELECT AvailableRooms FROM PackageDates WHERE Id = @DateId";
                     using (SqlCommand cmdStock = new SqlCommand(checkStockSql, conn, transaction))
@@ -118,15 +126,18 @@ public class WaitlistService
                         currentStock = (result != null && result != DBNull.Value) ? (int)result : 0;
                     }
 
-                    if (currentStock <= 0) return; // Stop if no room
+                    if (currentStock <= 0) return;
 
-                    // 2. Find Candidate
+                    // 2. Find Candidate (UPDATED QUERY TO GET EMAIL & NAME)
                     string findWaitlistSql = @"
                         SELECT TOP 1 
                             w.Id, w.UserId, w.PackageId, w.RequestedAmount, 
-                            pd.Price, pd.DiscountedPrice
+                            pd.Price, pd.DiscountedPrice,
+                            u.Email, u.FirstName, p.Title -- <--- Get these details
                         FROM WaitingList w
                         JOIN PackageDates pd ON w.PackageDateId = pd.Id
+                        JOIN Users u ON w.UserId = u.Id        -- <--- Join Users
+                        JOIN Packages p ON w.PackageId = p.Id  -- <--- Join Packages
                         WHERE w.PackageDateId = @DateId 
                         AND w.RequestedAmount <= @CurrentStock 
                         ORDER BY w.JoinedAt ASC";
@@ -150,6 +161,11 @@ public class WaitlistService
                                 userIdToPromote = (int)reader["UserId"];
                                 packageId = (int)reader["PackageId"];
                                 amountNeeded = (int)reader["RequestedAmount"];
+
+                                // Capture info for email
+                                userEmail = reader["Email"].ToString();
+                                userName = reader["FirstName"].ToString();
+                                packageTitle = reader["Title"].ToString();
 
                                 decimal price = (decimal)reader["Price"];
                                 decimal? discount = reader["DiscountedPrice"] != DBNull.Value ? (decimal?)reader["DiscountedPrice"] : null;
@@ -195,13 +211,28 @@ public class WaitlistService
                         }
 
                         transaction.Commit();
+                        promotionSuccess = true;
                     }
                 }
                 catch (Exception ex)
                 {
                     transaction.Rollback();
-                    // Optional: Log error here
-                    System.Diagnostics.Debug.WriteLine(ex.Message);
+                    System.Diagnostics.Debug.WriteLine("Promotion Error: " + ex.Message);
+                }
+
+                // 6. SEND EMAIL OUTSIDE THE CATCH BLOCK (IF SUCCESSFUL)
+                if (promotionSuccess && !string.IsNullOrEmpty(userEmail))
+                {
+                    string subject = "Good News! A Spot Opened Up for " + packageTitle;
+                    string body = $@"
+                        <h2>Waitlist Promotion!</h2>
+                        <p>Hi {userName},</p>
+                        <p>Great news! A spot has opened up for <strong>{packageTitle}</strong>.</p>
+                        <p>We have automatically reserved this trip for you. It is now in your Cart.</p>
+                        <p><strong>Please log in and complete your payment soon to secure your spot.</strong></p>";
+
+                    // No await here if you don't want to block, but safer to await
+                    await _emailService.SendEmailAsync(userEmail, subject, body);
                 }
             }
         }

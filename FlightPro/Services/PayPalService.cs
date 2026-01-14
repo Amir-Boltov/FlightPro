@@ -14,7 +14,7 @@ public class PayPalService
     {
         _configuration = configuration;
         var clientId = _configuration["PayPal:ClientId"];
-        var clientSecret = _configuration["PayPal:Secret"];
+        var clientSecret = _configuration["PayPal:ClientSecret"];
         PayPalEnvironment environment = new SandboxEnvironment(clientId, clientSecret);
         _client = new PayPalHttpClient(environment);
     }

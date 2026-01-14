@@ -8,11 +8,13 @@ namespace FlightPro.Controllers
     {
         private readonly IConfiguration _configuration;
         private readonly WaitlistService _waitlistService;
+        private readonly EmailService _emailService;
 
-        public WaitingListController(IConfiguration configuration, WaitlistService waitlistService)
+        public WaitingListController(IConfiguration configuration, WaitlistService waitlistService, EmailService emailService)
         {
             _configuration = configuration;
             _waitlistService = waitlistService;
+            _emailService = emailService;
         }
         // GET: WaitingList/Index
         public IActionResult Index()
@@ -125,59 +127,114 @@ namespace FlightPro.Controllers
 
         // POST: WaitingList/Join
         [HttpPost]
-        public IActionResult Join(int packageId, int packageDateId, int requestedAmount)
+        public async Task<IActionResult> Join(int packageId, int packageDateId, int requestedAmount)
         {
             // 1. Ensure User is Logged In
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null)
             {
-                return RedirectToAction("ViewLogin", "User");
+                // Return JSON so the AJAX handler knows to redirect or show error
+                return Json(new { success = false, message = "Login required." });
             }
 
-            using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
+            try
             {
-                conn.Open();
+                string connectionString = _configuration.GetConnectionString("myConnect");
 
-                // 2. Check for Duplicates (Prevent joining the same list twice)
-                // Note: Using your table name 'WaitingList' (singular)
-                string checkSql = "SELECT COUNT(1) FROM WaitingList WHERE UserId = @UserId AND PackageDateId = @DateId";
-                using (SqlCommand checkCmd = new SqlCommand(checkSql, conn))
+                // Variables to hold info for the email
+                string userEmail = null;
+                string userName = null;
+                string packageTitle = null;
+                DateTime? tripDate = null;
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
                 {
-                    checkCmd.Parameters.AddWithValue("@UserId", userId);
-                    checkCmd.Parameters.AddWithValue("@DateId", packageDateId);
-                    int count = (int)checkCmd.ExecuteScalar();
+                    conn.Open();
 
-                    if (count > 0)
+                    // 2. Check for Duplicates
+                    string checkSql = "SELECT COUNT(1) FROM WaitingList WHERE UserId = @UserId AND PackageDateId = @DateId";
+                    using (SqlCommand checkCmd = new SqlCommand(checkSql, conn))
                     {
-                        // Already on the list? Just show success.
-                        return RedirectToAction("JoinSuccess");
+                        checkCmd.Parameters.AddWithValue("@UserId", userId);
+                        checkCmd.Parameters.AddWithValue("@DateId", packageDateId);
+                        int count = (int)checkCmd.ExecuteScalar();
+
+                        if (count > 0)
+                        {
+                            return Json(new { success = true, message = "You are already on the waiting list for this trip." });
+                        }
+                    }
+
+                    // 3. Insert Record
+                    string insertSql = @"
+                INSERT INTO WaitingList 
+                (UserId, PackageId, PackageDateId, RequestedAmount, JoinedAt, IsNotified)
+                VALUES 
+                (@UserId, @PackageId, @DateId, @Amount, GETDATE(), 0)";
+
+                    using (SqlCommand cmd = new SqlCommand(insertSql, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@UserId", userId);
+                        cmd.Parameters.AddWithValue("@PackageId", packageId);
+                        cmd.Parameters.AddWithValue("@DateId", packageDateId);
+                        cmd.Parameters.AddWithValue("@Amount", requestedAmount);
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    // 4. Fetch Details for Email (User & Package Info)
+                    string infoSql = @"
+                SELECT u.Email, u.FirstName, p.Title, pd.StartDate
+                FROM Users u
+                JOIN Packages p ON p.Id = @PackageId
+                JOIN PackageDates pd ON pd.Id = @DateId
+                WHERE u.Id = @UserId";
+
+                    using (SqlCommand infoCmd = new SqlCommand(infoSql, conn))
+                    {
+                        infoCmd.Parameters.AddWithValue("@UserId", userId);
+                        infoCmd.Parameters.AddWithValue("@PackageId", packageId);
+                        infoCmd.Parameters.AddWithValue("@DateId", packageDateId);
+
+                        using (SqlDataReader reader = infoCmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                userEmail = reader["Email"].ToString();
+                                userName = reader["FirstName"].ToString();
+                                packageTitle = reader["Title"].ToString();
+                                tripDate = (DateTime)reader["StartDate"];
+                            }
+                        }
                     }
                 }
 
-                // 3. Insert Record
-                // Using your columns: JoinedAt, IsNotified
-                string insertSql = @"
-                    INSERT INTO WaitingList 
-                    (UserId, PackageId, PackageDateId, RequestedAmount, JoinedAt, IsNotified)
-                    VALUES 
-                    (@UserId, @PackageId, @PackageDateId, @RequestedAmount, GETDATE(), 0)";
-
-                using (SqlCommand cmd = new SqlCommand(insertSql, conn))
+                // 5. Send the Email
+                if (!string.IsNullOrEmpty(userEmail))
                 {
-                    cmd.Parameters.AddWithValue("@UserId", userId);
-                    cmd.Parameters.AddWithValue("@PackageId", packageId);
-                    cmd.Parameters.AddWithValue("@PackageDateId", packageDateId);
-                    cmd.Parameters.AddWithValue("@RequestedAmount", requestedAmount);
-                    // JoinedAt is handled by GETDATE()
-                    // IsNotified is set to 0 (false) by default
-                    // NotificationExpiresAt is left null until we actually notify them later
+                    string subject = "FlightPro Waitlist Confirmation";
+                    string body = $@"
+                <div style='font-family: Arial, sans-serif; color: #333;'>
+                    <h2>Hi {userName},</h2>
+                    <p>You have been successfully added to the waiting list for:</p>
+                    <div style='background: #f4f4f4; padding: 15px; border-radius: 5px; margin: 20px 0;'>
+                        <h3 style='margin: 0; color: #007bff;'>{packageTitle}</h3>
+                        <p style='margin: 5px 0 0;'><strong>Date:</strong> {tripDate:MMMM dd, yyyy}</p>
+                        <p style='margin: 5px 0 0;'><strong>Requested Seats:</strong> {requestedAmount}</p>
+                    </div>
+                    <p>If a spot opens up, we will notify you immediately via email.</p>
+                    <p>Best regards,<br/>The FlightPro Team</p>
+                </div>";
 
-                    cmd.ExecuteNonQuery();
+                    await _emailService.SendEmailAsync(userEmail, subject, body);
                 }
-            }
 
-            // 4. Redirect
-            return RedirectToAction("JoinSuccess");
+                return Json(new { success = true, message = "You have been added to the waiting list! We sent you a confirmation email." });
+
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
         }
         // POST: WaitingList/Leave
         [HttpPost]

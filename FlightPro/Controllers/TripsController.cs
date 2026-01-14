@@ -10,11 +10,13 @@ public class TripsController : Controller
 {
     private readonly IConfiguration _configuration;
     private readonly WaitlistService _waitlistService;
+    private readonly EmailService _emailService;
 
-    public TripsController(IConfiguration configuration, WaitlistService waitlistService)
+    public TripsController(IConfiguration configuration, WaitlistService waitlistService, EmailService emailService)
     {
         _configuration = configuration;
         _waitlistService = waitlistService;
+        _emailService = emailService;
     }
 
     public IActionResult Index(
@@ -49,11 +51,10 @@ public class TripsController : Controller
         {
             conn.Open();
 
-            // 1. Fetch distinct values for Dropdowns (to fill the <select> options)
+            // 1. Fetch distinct values for Dropdowns
             viewModel.AllCountries = GetDistinctColumn(conn, "Destinations", "Country");
-            viewModel.AllCities = GetDistinctColumn(conn, "Destinations", "Name"); // Assuming 'Name' is city
+            viewModel.AllCities = GetDistinctColumn(conn, "Destinations", "Name");
             viewModel.AllCategories = GetDistinctColumn(conn, "Packages", "Category");
-
 
             // 2. Build the Main Query
             string sql = @"
@@ -62,13 +63,32 @@ public class TripsController : Controller
                     d.Name AS CityName, d.Country AS CountryName,
                     pi.Url AS ImageUrl,
                     pd.StartDate, pd.EndDate, 
-                    pd.Price, pd.DiscountedPrice, pd.DiscountEndDate, pd.AvailableRooms,
+                    pd.Price, 
+                    
+                    -- LOGIC: If discount expired, return NULL
+                    CASE 
+                        WHEN pd.DiscountEndDate < CAST(GETDATE() AS DATE) THEN NULL 
+                        ELSE pd.DiscountedPrice 
+                    END AS DiscountedPrice,
+
+                    pd.DiscountEndDate, pd.AvailableRooms,
                     (SELECT COUNT(*) FROM Bookings b WHERE b.PackageDateId = pd.Id) as BookingCount,
-                    COALESCE(pd.DiscountedPrice, pd.Price) as EffectivePrice
+                    
+                    -- LOGIC: Calculate effective price checking expiry
+                    COALESCE(
+                        CASE 
+                            WHEN pd.DiscountEndDate < CAST(GETDATE() AS DATE) THEN NULL 
+                            ELSE pd.DiscountedPrice 
+                        END, 
+                        pd.Price
+                    ) as EffectivePrice
+
                 FROM Packages p
                 JOIN Destinations d ON p.DestinationId = d.Id
                 JOIN PackageDates pd ON p.Id = pd.PackageId
                 OUTER APPLY (SELECT TOP 1 Url FROM PackageImages WHERE PackageId = p.Id AND IsPrimary = 1) pi
+                
+                -- STRICT FILTERING: Hide if booking closed OR trip started
                 WHERE COALESCE(pd.BookingEndDate, pd.StartDate) >= CAST(GETDATE() AS DATE)";
 
             // 3. Apply Filters Dynamically
@@ -96,16 +116,17 @@ public class TripsController : Controller
             }
             if (onlyDiscounted)
             {
-                sql += " AND pd.DiscountedPrice IS NOT NULL ";
+                // Only show if discount exists AND is not expired
+                sql += " AND pd.DiscountedPrice IS NOT NULL AND (pd.DiscountEndDate IS NULL OR pd.DiscountEndDate >= CAST(GETDATE() AS DATE)) ";
             }
             if (minPrice.HasValue)
             {
-                sql += " AND COALESCE(pd.DiscountedPrice, pd.Price) >= @MinPrice ";
+                sql += " AND COALESCE(CASE WHEN pd.DiscountEndDate < CAST(GETDATE() AS DATE) THEN NULL ELSE pd.DiscountedPrice END, pd.Price) >= @MinPrice ";
                 parameters.Add(new SqlParameter("@MinPrice", minPrice.Value));
             }
             if (maxPrice.HasValue)
             {
-                sql += " AND COALESCE(pd.DiscountedPrice, pd.Price) <= @MaxPrice ";
+                sql += " AND COALESCE(CASE WHEN pd.DiscountEndDate < CAST(GETDATE() AS DATE) THEN NULL ELSE pd.DiscountedPrice END, pd.Price) <= @MaxPrice ";
                 parameters.Add(new SqlParameter("@MaxPrice", maxPrice.Value));
             }
             if (startDate.HasValue)
@@ -141,7 +162,7 @@ public class TripsController : Controller
                     sql += " ORDER BY p.Category ASC";
                     break;
                 default:
-                    sql += " ORDER BY pd.StartDate ASC"; // Default sort
+                    sql += " ORDER BY pd.StartDate ASC";
                     break;
             }
 
@@ -177,6 +198,7 @@ public class TripsController : Controller
 
         return View(viewModel);
     }
+
     public IActionResult Details(int id)
     {
         PackageModel package = null;
@@ -223,10 +245,9 @@ public class TripsController : Controller
             }
 
             if (package == null) return NotFound();
-            
-            // Fetch extra images if they exist
-            string imgSql = "SELECT TOP 3 Url FROM PackageImages WHERE PackageId = @Id AND IsPrimary = 0 ORDER BY Id";
 
+            // Fetch extra images
+            string imgSql = "SELECT TOP 3 Url FROM PackageImages WHERE PackageId = @Id AND IsPrimary = 0 ORDER BY Id";
             using (SqlCommand cmd = new SqlCommand(imgSql, conn))
             {
                 cmd.Parameters.AddWithValue("@Id", id);
@@ -236,22 +257,27 @@ public class TripsController : Controller
                     while (reader.Read())
                     {
                         string url = reader["Url"].ToString();
-
-                        // Manually map the first 3 extra images to your Model properties
                         if (count == 0) package.ImageUrl2 = url;
                         else if (count == 1) package.ImageUrl3 = url;
                         else if (count == 2) package.ImageUrl4 = url;
-
                         count++;
                     }
                 }
             }
 
             // 2. Fetch all Available Dates (Schedules) for this Package
+            // UPDATED LOGIC: Filter by BookingEndDate exactly like the Index
             string dateSql = @"
-            SELECT Id, StartDate, EndDate, Price, DiscountedPrice, AvailableRooms 
+            SELECT 
+                Id, StartDate, EndDate, BookingEndDate, Price, AvailableRooms,
+                DiscountEndDate,
+                CASE 
+                    WHEN DiscountEndDate < CAST(GETDATE() AS DATE) THEN NULL 
+                    ELSE DiscountedPrice 
+                END AS DiscountedPrice
             FROM PackageDates 
-            WHERE PackageId = @Id AND StartDate >= GETDATE()
+            WHERE PackageId = @Id 
+            AND COALESCE(BookingEndDate, StartDate) >= CAST(GETDATE() AS DATE)
             ORDER BY StartDate";
 
             using (SqlCommand cmd = new SqlCommand(dateSql, conn))
@@ -263,11 +289,13 @@ public class TripsController : Controller
                     {
                         package.AvailableSchedules.Add(new PackageDateModel
                         {
-                            Id = (int)reader["Id"], // This is the PackageDateId needed for booking
+                            Id = (int)reader["Id"],
                             StartDate = (DateTime)reader["StartDate"],
                             EndDate = (DateTime)reader["EndDate"],
+                            BookingEndDate = reader["BookingEndDate"] != DBNull.Value ? (DateTime?)reader["BookingEndDate"] : null,
                             Price = (decimal)reader["Price"],
                             DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value ? (decimal?)reader["DiscountedPrice"] : null,
+                            DiscountEndDate = reader["DiscountEndDate"] != DBNull.Value ? (DateTime?)reader["DiscountEndDate"] : null,
                             AvailableRooms = (int)reader["AvailableRooms"]
                         });
                     }
@@ -278,7 +306,6 @@ public class TripsController : Controller
         return View(package);
     }
 
-    // Helper method to fill dropdowns
     private List<string> GetDistinctColumn(SqlConnection conn, string tableName, string columnName)
     {
         var list = new List<string>();

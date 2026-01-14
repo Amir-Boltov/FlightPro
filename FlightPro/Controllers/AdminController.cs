@@ -18,10 +18,12 @@ namespace FlightPro.Controllers
     public class AdminController : Controller
     {
         private readonly IConfiguration _configuration;
+        private readonly EmailService _emailService;
 
-        public AdminController(IConfiguration configuration)
+        public AdminController(IConfiguration configuration, EmailService emailService)
         {
             _configuration = configuration;
+            _emailService = emailService;
         }
 
         // GET: Admin Dashboard
@@ -463,7 +465,7 @@ namespace FlightPro.Controllers
 
                 // 3. FETCH SCHEDULES (The part you were missing)
                 string dateSql = @"
-            SELECT Id, StartDate, EndDate, Price, DiscountedPrice 
+            SELECT Id, StartDate, EndDate, Price, DiscountedPrice, DiscountEndDate
             FROM PackageDates 
             WHERE PackageId = @Id 
             ORDER BY StartDate";
@@ -481,7 +483,8 @@ namespace FlightPro.Controllers
                                 StartDate = (DateTime)reader["StartDate"],
                                 EndDate = (DateTime)reader["EndDate"],
                                 Price = (decimal)reader["Price"],
-                                DiscountedPrice = reader["DiscountedPrice"] as decimal?
+                                DiscountedPrice = reader["DiscountedPrice"] as decimal?,
+                                DiscountEndDate = reader["DiscountEndDate"] as DateTime?
                             });
                         }
                     }
@@ -569,7 +572,6 @@ namespace FlightPro.Controllers
         [HttpGet]
         public IActionResult EditSchedule(int id)
         {
-            // Fetch the single schedule row
             PackageDateModel model = null;
             string connStr = _configuration.GetConnectionString("myConnect");
 
@@ -591,22 +593,35 @@ namespace FlightPro.Controllers
                                 StartDate = (DateTime)reader["StartDate"],
                                 EndDate = (DateTime)reader["EndDate"],
                                 Price = (decimal)reader["Price"],
-                                AvailableRooms = (int)reader["AvailableRooms"],
+                                // IMPORTANT: For editing, we load TotalRooms, but call it AvailableRooms in the model 
+                                // if that's how your model is defined, otherwise adjust property name.
+                                AvailableRooms = (int)reader["TotalRooms"],
+
                                 DiscountedPrice = reader["DiscountedPrice"] as decimal?,
-                                // Note: You need to add DiscountEndDate to your PackageDateModel if not there
-                                DiscountEndDate = reader["DiscountEndDate"] as DateTime?
+                                DiscountEndDate = reader["DiscountEndDate"] as DateTime?,
+                                BookingEndDate = reader["BookingEndDate"] as DateTime?
                             };
                         }
                     }
                 }
             }
+
+            if (model == null) return NotFound();
             return View(model);
         }
 
         [HttpPost]
-        public IActionResult EditSchedule(int id, int packageId, decimal price, int totalRooms, decimal? discountPrice, DateTime? discountEndDate)
+        public IActionResult EditSchedule(int id, int packageId, decimal price, int rooms, decimal? discountPrice, DateTime? discountEndDate, DateTime? bookingEndDate)
         {
+            // 1. SANITIZE DISCOUNT INPUTS
+            // If the user clears the price OR the date (or leaves both blank), we treat it as "Remove Discount"
+            if (discountPrice == null || discountEndDate == null)
+            {
+                discountPrice = null;
+                discountEndDate = null;
+            }
 
+            // 2. VALIDATE DISCOUNT DURATION (Only run if we actually have a NEW discount)
             if (discountPrice.HasValue && discountEndDate.HasValue)
             {
                 var daysUntilEnd = (discountEndDate.Value - DateTime.Now).TotalDays;
@@ -622,30 +637,56 @@ namespace FlightPro.Controllers
             {
                 conn.Open();
 
-                // 1. FETCH CURRENT TOTAL
-                string checkSql = "SELECT TotalRooms FROM PackageDates WHERE Id = @Id";
+                // 3. FETCH CURRENT DATA (For Capacity & Date Validation)
+                string checkSql = "SELECT TotalRooms, StartDate, BookingEndDate FROM PackageDates WHERE Id = @Id";
+
                 int currentTotal = 0;
+                DateTime startDate = DateTime.MinValue;
+                DateTime? currentBookingEnd = null;
 
                 using (SqlCommand checkCmd = new SqlCommand(checkSql, conn))
                 {
                     checkCmd.Parameters.AddWithValue("@Id", id);
-                    object result = checkCmd.ExecuteScalar();
-                    if (result != null) currentTotal = (int)result;
+                    using (SqlDataReader reader = checkCmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            currentTotal = (int)reader["TotalRooms"];
+                            startDate = (DateTime)reader["StartDate"];
+                            currentBookingEnd = reader["BookingEndDate"] as DateTime?;
+                        }
+                    }
                 }
 
-                // 2. STRICT RULE: ONLY INCREASES ALLOWED
-                if (totalRooms < currentTotal)
+                // VALIDATION: Capacity (Cannot reduce)
+                if (rooms < currentTotal)
                 {
                     TempData["Error"] = $"Error: You cannot reduce the room count. The current total is {currentTotal}.";
                     return RedirectToAction("EditSchedule", new { id = id });
                 }
 
-                // 3. CALCULATE DIFFERENCE (Will always be >= 0 now)
-                // Example: Old 20, New 30. Diff = +10.
-                int capacityDifference = totalRooms - currentTotal;
+                // VALIDATION: Booking End Date
+                if (bookingEndDate.HasValue)
+                {
+                    // Rule A: Cannot be after the trip Start Date
+                    if (bookingEndDate.Value > startDate)
+                    {
+                        TempData["Error"] = $"Error: Booking Deadline ({bookingEndDate.Value:yyyy-MM-dd}) cannot be after the Trip Start Date ({startDate:yyyy-MM-dd}).";
+                        return RedirectToAction("EditSchedule", new { id = id });
+                    }
 
-                // 4. UPDATE
-                // We add the difference to AvailableRooms to ensure we don't accidentally delete bookings.
+                    // Rule B: Can only extend (move closer to departure), not shrink
+                    if (currentBookingEnd.HasValue && bookingEndDate.Value < currentBookingEnd.Value)
+                    {
+                        TempData["Error"] = $"Error: You can only extend the booking window. The new date must be on or after the current deadline ({currentBookingEnd.Value:yyyy-MM-dd}).";
+                        return RedirectToAction("EditSchedule", new { id = id });
+                    }
+                }
+
+                // 4. CALCULATE CAPACITY DIFFERENCE
+                int capacityDifference = rooms - currentTotal;
+
+                // 5. UPDATE DATABASE
                 string sql = @"
             UPDATE PackageDates 
             SET Price=@Price, 
@@ -653,20 +694,17 @@ namespace FlightPro.Controllers
                 AvailableRooms = AvailableRooms + @Diff, 
                 DiscountedPrice=@DiscPrice, 
                 DiscountEndDate=@DiscEnd,
-                StartDate=@StartDate,
-                EndDate=@EndDate
+                BookingEndDate=@BookEnd
             WHERE Id=@Id";
 
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@Price", price);
-                    cmd.Parameters.AddWithValue("@NewTotal", totalRooms);
+                    cmd.Parameters.AddWithValue("@NewTotal", rooms);
                     cmd.Parameters.AddWithValue("@Diff", capacityDifference);
-                    // ... (Add other parameters: DiscPrice, DiscEnd, StartDate, EndDate, Id) ...
-
-                    // FILLING IN THE REST FOR COMPLETENESS:
                     cmd.Parameters.AddWithValue("@DiscPrice", (object)discountPrice ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@DiscEnd", (object)discountEndDate ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("@BookEnd", (object)bookingEndDate ?? DBNull.Value);
                     cmd.Parameters.AddWithValue("@Id", id);
 
                     cmd.ExecuteNonQuery();
@@ -674,7 +712,8 @@ namespace FlightPro.Controllers
             }
 
             TempData["Success"] = "Schedule updated successfully.";
-            return RedirectToAction("EditPackage", new { id = packageId });
+            // Ensure you redirect to the correct action (likely Details in Trips or Admin controller)
+            return RedirectToAction("Details", "Trips", new { id = packageId });
         }
         [HttpPost]
         public IActionResult DeleteSchedule(int dateId, int packageId)
@@ -907,19 +946,21 @@ namespace FlightPro.Controllers
 
         // 2. CREATE USER - POST
         [HttpPost]
-        public IActionResult CreateUser(string firstName, string lastName, string email, string password, bool isAdmin)
+        public async Task<IActionResult> CreateUser(string firstName, string lastName, string email, string password, bool isAdmin)
         {
-            if (HttpContext.Session.GetString("UserRole") != "Admin") return RedirectToAction("ViewLogin", "User");
+            if (HttpContext.Session.GetString("UserRole") != "Admin")
+                return RedirectToAction("ViewLogin", "User");
 
             string role = isAdmin ? "Admin" : "User";
-            string status = "Active"; // Default status
+            string status = "Active";
             string passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
             string connStr = _configuration.GetConnectionString("myConnect");
+
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
 
-                // Check duplication
+                // 1. Check duplication
                 string checkSql = "SELECT COUNT(1) FROM Users WHERE Email = @Email";
                 using (SqlCommand checkCmd = new SqlCommand(checkSql, conn))
                 {
@@ -927,11 +968,13 @@ namespace FlightPro.Controllers
                     if ((int)checkCmd.ExecuteScalar() > 0)
                     {
                         ModelState.AddModelError("Email", "Email already exists.");
-                        return View();
+                        // Note: Depending on your view structure, you might need to reload a list here 
+                        // or redirect back to show the error properly.
+                        return RedirectToAction("Users");
                     }
                 }
 
-                // Insert
+                // 2. Insert User
                 string sql = @"INSERT INTO Users (FirstName, LastName, Email, PasswordHash, Role, Status) 
                        VALUES (@Fn, @Ln, @Email, @Pass, @Role, @Status)";
 
@@ -943,11 +986,36 @@ namespace FlightPro.Controllers
                     cmd.Parameters.AddWithValue("@Pass", passwordHash);
                     cmd.Parameters.AddWithValue("@Role", role);
                     cmd.Parameters.AddWithValue("@Status", status);
-                    cmd.ExecuteNonQuery();
+
+                    cmd.ExecuteNonQuery(); // Execute the INSERT
                 }
             }
 
-            TempData["Success"] = "User created successfully!";
+            // 3. Send "Account Created" Email (After connection closes)
+            string subject = "Welcome to FlightPro - Account Created";
+            string body = $@"
+        <div style='font-family: Arial, sans-serif; padding: 20px;'>
+            <h2>Hello {firstName},</h2>
+            <p>An account has been created for you by our administrator.</p>
+            <p>Here are your login details:</p>
+            <ul>
+                <li><strong>Email:</strong> {email}</li>
+                <li><strong>Password:</strong> {password}</li>
+            </ul>
+            <p><em>Please log in and change your password as soon as possible for security.</em></p>
+        </div>";
+
+            try
+            {
+                await _emailService.SendEmailAsync(email, subject, body);
+                TempData["Success"] = "User created and email sent successfully!";
+            }
+            catch
+            {
+                // If email fails, we still consider the user created, but warn the admin
+                TempData["Success"] = "User created, but the email notification failed.";
+            }
+
             return RedirectToAction("Users");
         }
 

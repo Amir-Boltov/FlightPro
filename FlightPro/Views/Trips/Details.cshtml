@@ -328,6 +328,10 @@
                         {
                             bool isLowStock = date.AvailableRooms > 0 && date.AvailableRooms < 5;
                             bool isSoldOut = date.AvailableRooms == 0;
+                            bool hasDiscountDeadline = date.DiscountedPrice.HasValue
+                            && date.DiscountEndDate.HasValue
+                            && date.DiscountEndDate.Value.Date >= DateTime.Today;
+                            bool hasBookingDeadline = date.BookingEndDate.HasValue && date.BookingEndDate > DateTime.Now;
 
                             <tr>
                                 <td class="ps-4" style="width: 35%;">
@@ -352,24 +356,34 @@
                                 </td>
 
                                 <td style="width: 20%;">
-                                    @if (isSoldOut)
-                                    {
-                                        <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3 py-2">
-                                            <i class="bi bi-hourglass-split me-1"></i> Sold Out
-                                        </span>
-                                    }
-                                    else if (isLowStock)
-                                    {
-                                        <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2">
-                                            <i class="bi bi-fire me-1"></i> Only @date.AvailableRooms left
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2">
-                                            <i class="bi bi-check-circle me-1"></i> Available (@date.AvailableRooms rooms)
-                                        </span>
-                                    }
+                                    <div class="d-flex flex-column align-items-start gap-2">
+                                        @if (isSoldOut)
+                                        {
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3 py-2">
+                                                <i class="bi bi-hourglass-split me-1"></i> Sold Out
+                                            </span>
+                                        }
+                                        else if (isLowStock)
+                                        {
+                                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2">
+                                                <i class="bi bi-fire me-1"></i> Only @date.AvailableRooms left
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2">
+                                                <i class="bi bi-check-circle me-1"></i> Available (@date.AvailableRooms rooms)
+                                            </span>
+                                        }
+
+                                        @if (hasBookingDeadline && !isSoldOut)
+                                        {
+                                            <div class="text-muted small ms-1" style="font-size: 0.8rem; line-height: 1.2;">
+                                                <i class="bi bi-exclamation-circle text-warning me-1"></i>Book until:<br />
+                                                <span class="fw-bold text-dark">@date.BookingEndDate.Value.ToString("MMM dd yyyy")</span>
+                                            </div>
+                                        }
+                                    </div>
                                 </td>
 
                                 <td style="width: 15%;">
@@ -378,6 +392,13 @@
                                         {
                                             <span class="text-decoration-line-through text-muted small">$@date.Price.ToString("N0")</span>
                                             <span class="price-display text-danger">$@date.DiscountedPrice.Value.ToString("N0")</span>
+
+                                            @if (hasDiscountDeadline)
+                                            {
+                                                <div class="d-inline-block bg-danger bg-opacity-10 text-danger px-2 py-1 rounded mt-1" style="font-size: 0.7rem; width: fit-content;">
+                                                    <i class="bi bi-stopwatch-fill me-1"></i> Ends @date.DiscountEndDate.Value.ToString("MMM dd")
+                                                </div>
+                                            }
                                         }
                                         else
                                         {
@@ -389,7 +410,6 @@
 
                                 <td class="pe-4 text-end" style="width: 35%;">
                                     <div class="actions-container">
-
                                         <form asp-controller="MyBook" asp-action="AddToBasket" method="post"
                                               class="d-flex align-items-center gap-2 ajax-cart-form"
                                               data-next-url="/MyBook/Index">
@@ -470,12 +490,12 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
 
+            // --- PART 1: Existing Cart Logic (Keep this) ---
             const forms = document.querySelectorAll('.ajax-cart-form');
-
             forms.forEach(form => {
                 form.addEventListener('submit', function (e) {
                     e.preventDefault();
-
+                    // ... (your existing cart logic here) ...
                     // Capture where this specific form wants to go on success
                     const nextUrl = this.getAttribute('data-next-url');
                     const formData = new FormData(this);
@@ -486,16 +506,11 @@
                     })
                     .then(response => response.json())
                     .then(data => {
-
-                        // 1. LOGIN NEEDED
-                        if (data.requireLogin) {
-                            // If they clicked "Buy Now", we probably want to send them back to checkout after login
-                            // For now, standard login redirect:
+                         if (data.requireLogin) {
                             window.location.href = '/User/ViewLogin';
                             return;
                         }
-
-                        // 2. FULL -> OPEN WAITING LIST
+                        // IF FULL -> SHOW MODAL
                         if (data.isFull) {
                             document.getElementById('wl_packageId').value = data.packageId;
                             document.getElementById('wl_packageDateId').value = data.packageDateId;
@@ -504,18 +519,13 @@
                             var myModal = new bootstrap.Modal(document.getElementById('waitingListModal'));
                             myModal.show();
                         }
-                        // 3. SUCCESS -> REDIRECT BASED ON BUTTON CLICKED
                         else if (data.success) {
                             if (nextUrl.includes("/Order/Checkout")) {
-                                // Append the specific ID so the checkout ignores the rest of the cart
                                 window.location.href = nextUrl + "?bookingId=" + data.bookingId;
-                            }
-                            else {
-                                // Standard "Add to Cart" flow
+                            } else {
                                 window.location.href = nextUrl;
                             }
-                        }
-                        else {
+                        } else {
                             alert(data.message || "An error occurred.");
                         }
                     })
@@ -525,6 +535,42 @@
                     });
                 });
             });
+
+            // --- PART 2: NEW WAITING LIST LOGIC (ADD THIS) ---
+                    // --- PART 2: WAITING LIST LOGIC ---
+        const wlForm = document.getElementById('waitingListForm');
+        if (wlForm) {
+            wlForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const formData = new FormData(this);
+
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Close the modal first (looks cleaner)
+                    const modalEl = document.getElementById('waitingListModal');
+                    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                    if (modalInstance) modalInstance.hide();
+
+                    if (data.success) {
+                        // CHANGE IS HERE: Redirect instead of Alert
+                        // This assumes your controller is WaitingList and action is JoinSuccess
+                        window.location.href = '/WaitingList/JoinSuccess';
+                    } else {
+                        // Keep the error as an alert so they know what went wrong
+                        alert("Error: " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            });
+        }
+
         });
     </script>
 }

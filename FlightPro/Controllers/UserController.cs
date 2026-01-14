@@ -11,10 +11,12 @@ namespace FlightPro.Controllers
     public class UserController : Controller
     {
         private readonly IConfiguration _configuration;
+        private readonly EmailService _emailService;
 
-        public UserController(IConfiguration configuration)
+        public UserController(IConfiguration configuration, EmailService emailService)
         {
             _configuration = configuration;
+            _emailService = emailService;
         }
 
         // Register Page (GET)
@@ -23,25 +25,25 @@ namespace FlightPro.Controllers
             return View();
         }
 
-        
+
         // Register Logic (POST)
-        
+
         [HttpPost]
-        public IActionResult Register(UserModel user)
+        public async Task<IActionResult> Register(UserModel user) // Changed to Async
         {
             if (!ModelState.IsValid)
             {
                 return View("ViewRegister", user);
             }
+
             string passwordHash = BCrypt.Net.BCrypt.HashPassword(user.Password);
             string connectionString = _configuration.GetConnectionString("myConnect");
 
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
-                // Query matches your new SQL Schema
                 string query = @"
-                    INSERT INTO Users (FirstName, LastName, Email, PasswordHash, Role, Status) 
-                    VALUES (@FirstName, @LastName, @Email, @PasswordHash, 'User', 'Active')";
+            INSERT INTO Users (FirstName, LastName, Email, PasswordHash, Role, Status) 
+            VALUES (@FirstName, @LastName, @Email, @PasswordHash, 'User', 'Active')";
 
                 using (SqlCommand command = new SqlCommand(query, connection))
                 {
@@ -55,7 +57,20 @@ namespace FlightPro.Controllers
                         connection.Open();
                         command.ExecuteNonQuery(); // Execute the INSERT
 
-                        // Success -> Go to Login
+                        // --- NEW EMAIL LOGIC START ---
+                        string subject = "Welcome to FlightPro!";
+                        string body = $@"
+                    <div style='font-family: Arial, sans-serif; padding: 20px;'>
+                        <h2>Welcome, {user.FirstName}!</h2>
+                        <p>Thank you for registering with <strong>FlightPro</strong>.</p>
+                        <p>Your account has been successfully created.</p>
+                        <p>You can now log in to book your next adventure!</p>
+                    </div>";
+
+                        // We await this so the user doesn't get redirected until the email is sent
+                        await _emailService.SendEmailAsync(user.Email, subject, body);
+                        // --- NEW EMAIL LOGIC END ---
+
                         return RedirectToAction("ViewLogin");
                     }
                     catch (SqlException ex)

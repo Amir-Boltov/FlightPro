@@ -18,13 +18,15 @@ namespace FlightPro.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly WaitlistService _waitlistService;
         private readonly BookingRuleService _bookingRuleService;
+        private readonly EmailService _emailService;    
 
-        public MyBookController(IConfiguration configuration, IWebHostEnvironment webHostEnvironment, WaitlistService waitlistService, BookingRuleService bookingRuleService)
+        public MyBookController(IConfiguration configuration, IWebHostEnvironment webHostEnvironment, WaitlistService waitlistService, BookingRuleService bookingRuleService, EmailService emailService)
         {
             _configuration = configuration;
             _webHostEnvironment = webHostEnvironment;
             _waitlistService = waitlistService;
             _bookingRuleService = bookingRuleService;
+            _emailService = emailService;
         }
 
         // ==========================================
@@ -124,6 +126,7 @@ namespace FlightPro.Controllers
         {
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return Json(new { success = false, requireLogin = true });
+
             // --- 3. THE CHECK ---
             if (!_bookingRuleService.CanUserBookMore(userId.Value))
             {
@@ -138,11 +141,15 @@ namespace FlightPro.Controllers
                     try
                     {
                         // ---------------------------------------------------------
-                        // STEP 1: Get Price & Discount Info
+                        // STEP 1: Get Price & Discount Info (UPDATED)
                         // ---------------------------------------------------------
-                        // We Join Packages to get the DiscountPrice.
+                        // We Join Packages to get the DiscountPrice AND the Expiry Date.
                         string checkSql = @"
-                    SELECT d.AvailableRooms, d.Price, d.DiscountedPrice 
+                    SELECT 
+                        d.AvailableRooms, 
+                        d.Price, 
+                        d.DiscountedPrice, 
+                        d.DiscountEndDate  -- <--- ADDED THIS
                     FROM PackageDates d
                     JOIN Packages p ON d.PackageId = p.Id
                     WHERE d.Id = @DateId";
@@ -160,12 +167,22 @@ namespace FlightPro.Controllers
                                     availableRooms = (int)reader["AvailableRooms"];
                                     decimal basePrice = (decimal)reader["Price"];
 
-                                    // LOGIC: Use DiscountPrice if it exists and is greater than 0
                                     decimal discountPrice = reader["DiscountedPrice"] != DBNull.Value
                                                             ? (decimal)reader["DiscountedPrice"]
                                                             : 0;
 
-                                    finalPrice = (discountPrice > 0) ? discountPrice : basePrice;
+                                    // Read the End Date
+                                    DateTime? discountEndDate = reader["DiscountEndDate"] != DBNull.Value
+                                                              ? (DateTime?)reader["DiscountEndDate"]
+                                                              : null;
+
+                                    // --- LOGIC FIX: Check Expiry ---
+                                    // 1. Must have a discount price > 0
+                                    // 2. Expiry date must be NULL (no expiry) OR in the future/today
+                                    bool isDiscountValid = discountPrice > 0 &&
+                                                           (!discountEndDate.HasValue || discountEndDate.Value.Date >= DateTime.Now.Date);
+
+                                    finalPrice = isDiscountValid ? discountPrice : basePrice;
                                 }
                                 else
                                 {
@@ -202,7 +219,7 @@ namespace FlightPro.Controllers
                     WHERE UserId = @UserId AND PackageDateId = @DateId AND Status = 'InCart'";
 
                         int existingBookingId = 0;
-                        int existingAmount = 0;
+                        // int existingAmount = 0; // Unused variable removed for cleanliness
 
                         using (SqlCommand existingCmd = new SqlCommand(checkExistingSql, conn, transaction))
                         {
@@ -213,7 +230,7 @@ namespace FlightPro.Controllers
                                 if (r.Read())
                                 {
                                     existingBookingId = (int)r["Id"];
-                                    existingAmount = (int)r["Amount"];
+                                    // existingAmount = (int)r["Amount"];
                                 }
                             }
                         }
@@ -223,7 +240,6 @@ namespace FlightPro.Controllers
                         if (existingBookingId > 0)
                         {
                             // CASE A: UPDATE EXISTING ROW
-                            // We add the new amount to the old amount, and update the TotalPrice
                             string updateBookingSql = @"
                         UPDATE Bookings 
                         SET Amount = Amount + @NewAmount, 
@@ -270,9 +286,9 @@ namespace FlightPro.Controllers
                 }
             }
         }
-
+        /*
         [HttpPost]
-        public IActionResult JoinWaitingList(int packageId, int packageDateId, int amount)
+        public async Task<IActionResult> JoinWaitingList(int packageId, int packageDateId, int amount) // Changed to async Task
         {
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return Json(new { success = false, message = "Login required." });
@@ -280,10 +296,18 @@ namespace FlightPro.Controllers
             try
             {
                 string connectionString = _configuration.GetConnectionString("myConnect");
+
+                // Variables to hold info for the email
+                string userEmail = null;
+                string userName = null;
+                string packageTitle = null;
+                DateTime? tripDate = null;
+
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
-                    // Check if already in waiting list to avoid duplicates
+
+                    // 1. Check if already in waiting list
                     string checkSql = "SELECT COUNT(*) FROM WaitingList WHERE UserId = @UserId AND PackageDateId = @DateId AND IsNotified = 0";
                     using (SqlCommand checkCmd = new SqlCommand(checkSql, conn))
                     {
@@ -297,7 +321,7 @@ namespace FlightPro.Controllers
                         }
                     }
 
-                    // Insert into Waiting List
+                    // 2. Insert into Waiting List
                     string sql = @"INSERT INTO WaitingList (UserId, PackageId, PackageDateId, RequestedAmount) 
                            VALUES (@UserId, @PackageId, @DateId, @Amount)";
 
@@ -309,14 +333,71 @@ namespace FlightPro.Controllers
                         cmd.Parameters.AddWithValue("@Amount", amount);
                         cmd.ExecuteNonQuery();
                     }
+
+                    // 3. NEW: Fetch User and Package Details for the Email
+                    // We join Users, Packages, and PackageDates to get all info in one query
+                    string infoSql = @"
+                SELECT u.Email, u.FirstName, p.Title, pd.StartDate
+                FROM Users u
+                JOIN Packages p ON p.Id = @PackageId
+                JOIN PackageDates pd ON pd.Id = @DateId
+                WHERE u.Id = @UserId";
+
+                    using (SqlCommand infoCmd = new SqlCommand(infoSql, conn))
+                    {
+                        infoCmd.Parameters.AddWithValue("@UserId", userId);
+                        infoCmd.Parameters.AddWithValue("@PackageId", packageId);
+                        infoCmd.Parameters.AddWithValue("@DateId", packageDateId);
+
+                        using (SqlDataReader reader = infoCmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                userEmail = reader["Email"].ToString();
+                                userName = reader["FirstName"].ToString();
+                                packageTitle = reader["Title"].ToString();
+                                tripDate = (DateTime)reader["StartDate"];
+                            }
+                        }
+                    }
                 }
-                return Json(new { success = true, message = "You have been added to the waiting list! We will notify you if a spot opens." });
+
+                // 4. NEW: Send the Email (Logic is outside the DB connection to keep it fast)
+                if (!string.IsNullOrEmpty(userEmail))
+                {
+                    string subject = "FlightPro Waitlist Confirmation";
+                    string body = $@"
+                <div style='font-family: Arial, sans-serif; color: #333;'>
+                    <h2>Hi {userName},</h2>
+                    <p>You have been successfully added to the waiting list for:</p>
+                    <div style='background: #f4f4f4; padding: 15px; border-radius: 5px; margin: 20px 0;'>
+                        <h3 style='margin: 0; color: #007bff;'>{packageTitle}</h3>
+                        <p style='margin: 5px 0 0;'><strong>Date:</strong> {tripDate:MMMM dd, yyyy}</p>
+                        <p style='margin: 5px 0 0;'><strong>Requested Seats:</strong> {amount}</p>
+                    </div>
+                    <p>If a spot opens up, we will notify you immediately via email.</p>
+                    <p>Best regards,<br/>The FlightPro Team</p>
+                </div>";
+
+                    // We use await here so the user sees the success message only after email is sent
+                    await _emailService.SendEmailAsync(userEmail, subject, body);
+                }
+
+                //return Json(new { success = true, message = "You have been added to the waiting list! We sent you a confirmation email." });
+                return Json(new
+                {
+                    success = true,
+                    message = $"DEBUG: Added to DB. Attempted email to: '{userEmail}'. Check your inbox!"
+                });
             }
             catch (Exception ex)
             {
+                // Log the error here if you have a logger
                 return Json(new { success = false, message = "Error joining list: " + ex.Message });
             }
         }
+        */
+
         // הסרה מהסל (פעולה למוצרים שעדיין לא שולמו)
         public IActionResult RemoveFromBasket(int bookingId)
         {
@@ -459,17 +540,22 @@ namespace FlightPro.Controllers
 
         // ביטול הזמנה שכבר בוצעה (מההיסטוריה)
         [HttpPost]
-        public IActionResult CancelBooking(int bookingId)
+        public async Task<IActionResult> CancelBooking(int bookingId) // Make Async
         {
             int? userId = HttpContext.Session.GetInt32("UserId");
             if (userId == null) return RedirectToAction("ViewLogin", "User");
+
             int dateIdToPromote = 0;
+
+            // Variables for Email
+            string userEmail = "";
+            string userName = "";
+            string packageTitle = "";
+            bool cancelSuccess = false;
 
             using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
             {
                 conn.Open();
-
-                // FIX 1: Wrap in Transaction for safety
                 using (SqlTransaction transaction = conn.BeginTransaction())
                 {
                     try
@@ -477,10 +563,14 @@ namespace FlightPro.Controllers
                         int packageDateId = 0;
                         int amountToReturn = 0;
 
-                        // FIX 2: Check Status != 'Canceled' to prevent double-refunds
-                        string getSql = @"SELECT PackageDateId, Amount 
-                                  FROM Bookings 
-                                  WHERE Id = @Id AND UserId = @UserId AND Status != 'Canceled'";
+                        // 1. Get Booking Info + User Info for Email
+                        string getSql = @"
+                    SELECT b.PackageDateId, b.Amount,
+                           u.Email, u.FirstName, p.Title 
+                    FROM Bookings b
+                    JOIN Users u ON b.UserId = u.Id
+                    JOIN Packages p ON b.PackageId = p.Id
+                    WHERE b.Id = @Id AND b.UserId = @UserId AND b.Status != 'Canceled'";
 
                         using (SqlCommand cmd = new SqlCommand(getSql, conn, transaction))
                         {
@@ -492,15 +582,19 @@ namespace FlightPro.Controllers
                                 {
                                     packageDateId = (int)reader["PackageDateId"];
                                     amountToReturn = reader["Amount"] != DBNull.Value ? (int)reader["Amount"] : 0;
+
+                                    // Capture info
+                                    userEmail = reader["Email"].ToString();
+                                    userName = reader["FirstName"].ToString();
+                                    packageTitle = reader["Title"].ToString();
                                 }
                                 else
                                 {
-                                    // If we find no rows, it means it doesn't exist OR is already canceled.
-                                    // We stop here to protect the data.
                                     return RedirectToAction("OrderHistory");
                                 }
                             }
                         }
+
                         dateIdToPromote = packageDateId;
 
                         // 2. Update Status
@@ -524,18 +618,39 @@ namespace FlightPro.Controllers
                         }
 
                         transaction.Commit();
+                        cancelSuccess = true;
                     }
                     catch
                     {
                         transaction.Rollback();
-                        // Handle error
                     }
                 }
             }
+
+            // --- ACTIONS AFTER TRANSACTION ---
+
+            // 1. Send Cancellation Email
+            if (cancelSuccess && !string.IsNullOrEmpty(userEmail))
+            {
+                string subject = "Booking Cancellation Confirmed - " + packageTitle;
+                string body = $@"
+            <h2>Cancellation Confirmed</h2>
+            <p>Hi {userName},</p>
+            <p>Your booking for <strong>{packageTitle}</strong> has been successfully canceled.</p>
+            <p>If you paid for this trip, a refund will be processed according to our policy.</p>
+            <p>We hope to see you on another trip soon!</p>";
+
+                await _emailService.SendEmailAsync(userEmail, subject, body);
+            }
+
+            // 2. Check Waitlist (Now Awaited)
             if (dateIdToPromote > 0)
             {
-                _waitlistService.TryPromoteFromWaitlist(dateIdToPromote);
+                // This will now internally send an email to the promoted person too!
+                await _waitlistService.TryPromoteFromWaitlist(dateIdToPromote);
+                // Note: Make sure you inject the service as 'WaitlistService' or whatever interface you use.
             }
+
             return RedirectToAction("OrderHistory");
         }
 

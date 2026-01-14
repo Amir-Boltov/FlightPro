@@ -180,12 +180,15 @@
                                             <small class="text-muted">to @date.EndDate.ToString("MMM dd, yyyy")</small>
                                         </td>
                                         <td class="align-middle">
-                                            @if (date.DiscountedPrice.HasValue)
+                                            @if (date.DiscountedPrice.HasValue && date.DiscountEndDate >= DateTime.Today)
                                             {
                                                 <span class="text-danger fw-bold">$@date.DiscountedPrice</span>
-
                                                 <br>
                                                 <span class="text-decoration-line-through text-muted small">$@date.Price</span>
+
+                                                <div style="font-size: 0.7rem;" class="text-danger">
+                                                    Ends: @(((DateTime)date.DiscountEndDate).ToString("MMM dd"))
+                                                </div>
                                             }
                                             else
                                             {

@@ -1,6 +1,34 @@
 ﻿@model FlightPro.Models.PackageDateModel
 @{
     ViewData["Title"] = "Edit Schedule " + Model.Id;
+
+    // --- 1. SAFELY HANDLE BOOKING DATES ---
+    // We cast to (DateTime?) explicitly to force the view to treat it as nullable.
+    // This prevents the "Does not contain definition for HasValue" error.
+    DateTime? bDate = (DateTime?)Model.BookingEndDate;
+
+    string bookingMinDate = bDate != null
+                     ? bDate.Value.ToString("yyyy-MM-dd")
+                     : DateTime.Now.ToString("yyyy-MM-dd");
+
+    string bookingMaxDate = Model.StartDate.ToString("yyyy-MM-dd");
+
+
+    // --- 2. SAFELY HANDLE DISCOUNT LOGIC ---
+    // We use >= comparison which works for both DateTime and DateTime? automatically.
+    // This avoids using .HasValue explicitly, fixing your specific crash.
+    bool isDiscountActive = Model.DiscountEndDate >= DateTime.Today;
+
+    // If active, we prepopulate the inputs. If expired/null, we leave them null.
+    var currentDiscPrice = isDiscountActive ? Model.DiscountedPrice : null;
+
+    // Safely format the date string
+    string currentDiscDate = null;
+    if (isDiscountActive && Model.DiscountEndDate != null)
+    {
+        // We cast to DateTime to access .ToString() safely
+        currentDiscDate = ((DateTime)Model.DiscountEndDate).ToString("yyyy-MM-dd");
+    }
 }
 
 <div class="container mt-5" style="max-width: 600px;">
@@ -13,7 +41,10 @@
     <div class="card shadow">
         <div class="card-header bg-dark text-white">
             <h4>Edit Schedule Details</h4>
-            <small>@Model.StartDate.ToString("D")</small>
+            <div class="d-flex justify-content-between">
+                <small>Trip Date: @Model.StartDate.ToString("D")</small>
+                <span class="badge bg-light text-dark">ID: @Model.Id</span>
+            </div>
         </div>
         <div class="card-body">
             <form asp-action="EditSchedule" method="post">
@@ -23,15 +54,13 @@
                 <div class="row mb-3">
                     <div class="col-6">
                         <label class="form-label">Total Rooms</label>
-
                         <input type="number" name="rooms" class="form-control"
                                value="@Model.AvailableRooms"
                                min="@Model.AvailableRooms"
                                required />
                         <div class="form-text text-muted" style="font-size: 0.8rem;">
-                            You can only increase capacity.
+                            Only increases allowed.
                         </div>
-
                     </div>
                     <div class="col-6">
                         <label class="form-label">Regular Price ($)</label>
@@ -39,29 +68,53 @@
                     </div>
                 </div>
 
-                <hr />
-
-                <h5 class="text-danger"><i class="bi bi-tag-fill"></i> Add Discount</h5>
-                <p class="text-muted small">Discounts cannot last longer than 7 days from today.</p>
-
                 <div class="mb-3">
-                    <label class="form-label">Discounted Price ($)</label>
-                    <input type="number" name="discountPrice" class="form-control"
-                           value="@Model.DiscountedPrice" placeholder="Leave empty to remove discount" />
+                    <label class="form-label fw-bold">Last Booking Date</label>
+                    <input type="date" name="bookingEndDate" class="form-control"
+                           value="@(bDate?.ToString("yyyy-MM-dd"))"
+                           min="@bookingMinDate"
+                           max="@bookingMaxDate" />
+                    <div class="form-text text-muted">
+                        Users cannot book after this date.
+                        <br />
+                        <strong>Constraint:</strong> You can only extend the deadline (move it closer to departure).
+                    </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Discount Ends On</label>
-                    <input type="date" name="discountEndDate" class="form-control"
-                           value="@(Model.DiscountEndDate?.ToString("yyyy-MM-dd"))"
-                           min="@DateTime.Now.ToString("yyyy-MM-dd")"
-                           max="@DateTime.Now.AddDays(7).ToString("yyyy-MM-dd")" />
-                    <div class="form-text">Must be within the next 7 days.</div>
+                <hr />
+
+                <h5 class="text-danger"><i class="bi bi-tag-fill"></i> Manage Discount</h5>
+
+                @if (Model.DiscountEndDate != null && !isDiscountActive)
+                {
+                    <div class="alert alert-secondary py-2 small">
+                        <i class="bi bi-info-circle-fill"></i> A previous discount ended on @(((DateTime)Model.DiscountEndDate).ToShortDateString()).
+                        The fields below have been cleared so you can edit freely.
+                    </div>
+                }
+
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Discount Price ($)</label>
+                        <input type="number" name="discountPrice" class="form-control"
+                               value="@currentDiscPrice"
+                               placeholder="Leave empty to remove" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Ends On</label>
+                        <input type="date" name="discountEndDate" class="form-control"
+                               value="@currentDiscDate"
+                               min="@DateTime.Now.ToString("yyyy-MM-dd")"
+                               max="@DateTime.Now.AddDays(7).ToString("yyyy-MM-dd")" />
+                    </div>
+                </div>
+                <div class="form-text mb-3">
+                    Leave both blank to remove any active discount. Max duration: 7 days.
                 </div>
 
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-success">Save Changes</button>
-                    <a asp-action="EditPackage" asp-route-id="@Model.PackageId" class="btn btn-outline-secondary">Cancel</a>
+                    <a asp-action="Details" asp-controller="Trips" asp-route-id="@Model.PackageId" class="btn btn-outline-secondary">Cancel</a>
                 </div>
             </form>
         </div>
