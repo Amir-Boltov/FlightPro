@@ -181,6 +181,8 @@ public class TripsController : Controller
     {
         PackageModel package = null;
         string connectionString = _configuration.GetConnectionString("myConnect");
+
+        // ניקוי רשימות המתנה אם צריך
         _waitlistService.CleanupAndPromoteForPackage(id);
 
         using (SqlConnection conn = new SqlConnection(connectionString))
@@ -189,14 +191,14 @@ public class TripsController : Controller
 
             // 1. Fetch the General Package Info
             string pkgSql = @"
-            SELECT 
-                p.Id, p.Title, p.Description, p.Category, p.MinAge, p.CancellationDeadlineDays,
-                d.Name AS CityName, d.Country AS CountryName,
-                pi.Url AS MainImageUrl
-            FROM Packages p
-            JOIN Destinations d ON p.DestinationId = d.Id
-            OUTER APPLY (SELECT TOP 1 Url FROM PackageImages WHERE PackageId = p.Id AND IsPrimary = 1) pi
-            WHERE p.Id = @Id";
+        SELECT 
+            p.Id, p.Title, p.Description, p.Category, p.MinAge, p.CancellationDeadlineDays,
+            d.Name AS CityName, d.Country AS CountryName,
+            pi.Url AS MainImageUrl
+        FROM Packages p
+        JOIN Destinations d ON p.DestinationId = d.Id
+        OUTER APPLY (SELECT TOP 1 Url FROM PackageImages WHERE PackageId = p.Id AND IsPrimary = 1) pi
+        WHERE p.Id = @Id";
 
             using (SqlCommand cmd = new SqlCommand(pkgSql, conn))
             {
@@ -216,14 +218,17 @@ public class TripsController : Controller
                             Destination = reader["CityName"].ToString(),
                             Country = reader["CountryName"].ToString(),
                             MainImageUrl = reader["MainImageUrl"] != DBNull.Value ? reader["MainImageUrl"].ToString() : "/img/default.jpg",
-                            AvailableSchedules = new List<PackageDateModel>()
+
+                            // אתחול הרשימות כדי למנוע Null Reference
+                            AvailableSchedules = new List<PackageDateModel>(),
+                            Reviews = new List<PackageReviewModel>()
                         };
                     }
                 }
             }
 
             if (package == null) return NotFound();
-            
+
             // Fetch extra images if they exist
             string imgSql = "SELECT TOP 3 Url FROM PackageImages WHERE PackageId = @Id AND IsPrimary = 0 ORDER BY Id";
 
@@ -237,7 +242,6 @@ public class TripsController : Controller
                     {
                         string url = reader["Url"].ToString();
 
-                        // Manually map the first 3 extra images to your Model properties
                         if (count == 0) package.ImageUrl2 = url;
                         else if (count == 1) package.ImageUrl3 = url;
                         else if (count == 2) package.ImageUrl4 = url;
@@ -249,10 +253,10 @@ public class TripsController : Controller
 
             // 2. Fetch all Available Dates (Schedules) for this Package
             string dateSql = @"
-            SELECT Id, StartDate, EndDate, Price, DiscountedPrice, AvailableRooms 
-            FROM PackageDates 
-            WHERE PackageId = @Id AND StartDate >= GETDATE()
-            ORDER BY StartDate";
+        SELECT Id, StartDate, EndDate, Price, DiscountedPrice, AvailableRooms 
+        FROM PackageDates 
+        WHERE PackageId = @Id AND StartDate >= GETDATE()
+        ORDER BY StartDate";
 
             using (SqlCommand cmd = new SqlCommand(dateSql, conn))
             {
@@ -263,12 +267,32 @@ public class TripsController : Controller
                     {
                         package.AvailableSchedules.Add(new PackageDateModel
                         {
-                            Id = (int)reader["Id"], // This is the PackageDateId needed for booking
+                            Id = (int)reader["Id"],
                             StartDate = (DateTime)reader["StartDate"],
                             EndDate = (DateTime)reader["EndDate"],
                             Price = (decimal)reader["Price"],
                             DiscountedPrice = reader["DiscountedPrice"] != DBNull.Value ? (decimal?)reader["DiscountedPrice"] : null,
                             AvailableRooms = (int)reader["AvailableRooms"]
+                        });
+                    }
+                }
+            }
+
+            // 3. Fetch Reviews (החלק החדש שהוספנו)
+            string reviewSql = "SELECT UserName, Rating, Comment, Date FROM PackageReviews WHERE PackageId = @Id ORDER BY Date DESC";
+            using (SqlCommand cmd = new SqlCommand(reviewSql, conn))
+            {
+                cmd.Parameters.AddWithValue("@Id", id);
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        package.Reviews.Add(new PackageReviewModel
+                        {
+                            UserName = reader["UserName"].ToString(),
+                            Rating = (int)reader["Rating"],
+                            Comment = reader["Comment"].ToString(),
+                            Date = (DateTime)reader["Date"]
                         });
                     }
                 }

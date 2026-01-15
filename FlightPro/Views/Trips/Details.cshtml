@@ -211,6 +211,45 @@
             border-radius: 20px;
             border: 2px solid #fff;
         }
+
+    /* --- New Styles for Reviews --- */
+    .reviews-card {
+        border: none;
+        border-radius: 24px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.06);
+        background-color: #fff;
+        padding: 40px;
+    }
+
+    .review-item {
+        border-bottom: 1px solid #f3f4f6;
+        padding-bottom: 25px;
+        margin-bottom: 25px;
+    }
+
+        .review-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
+
+    .star-rating i {
+        color: #fbbf24; /* Gold color */
+        margin-right: 2px;
+    }
+
+    .user-avatar {
+        width: 45px;
+        height: 45px;
+        background-color: #eff6ff;
+        color: #3b82f6;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
 </style>
 
 <div class="container mt-5 mb-5">
@@ -302,6 +341,7 @@
         </div>
     </div>
 
+    @* --- BOOKING DATES SECTION --- *@
     <div class="dates-card mt-5">
         <div class="dates-header">
             <h2 class="fw-bold text-dark mb-2">Available Dates</h2>
@@ -389,7 +429,6 @@
 
                                 <td class="pe-4 text-end" style="width: 35%;">
                                     <div class="actions-container">
-
                                         <form asp-controller="MyBook" asp-action="AddToBasket" method="post"
                                               class="d-flex align-items-center gap-2 ajax-cart-form"
                                               data-next-url="/MyBook/Index">
@@ -429,8 +468,66 @@
             </div>
         </div>
     </div>
+
+    @* --- REVIEWS SECTION (Visible ONLY if reviews exist) --- *@
+    @if (Model.Reviews != null && Model.Reviews.Any())
+    {
+        <div class="reviews-card mt-5">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold text-dark mb-2">Traveler Reviews</h2>
+                <div class="d-flex justify-content-center align-items-center gap-2 text-warning fs-5">
+                    @* חישוב ממוצע דירוג להצגה *@
+                    @{
+                        double avgRating = Model.Reviews.Average(r => r.Rating);
+                    }
+                    <span class="fw-bold text-dark">@avgRating.ToString("0.0")</span>
+                    <div class="star-rating">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <i class="bi @(i <= Math.Round(avgRating) ? "bi-star-fill" : "bi-star")"></i>
+                        }
+                    </div>
+                    <span class="text-muted fs-6">(@Model.Reviews.Count reviews)</span>
+                </div>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    @foreach (var review in Model.Reviews)
+                    {
+                        <div class="review-item">
+                            <div class="d-flex gap-3">
+                                <div class="user-avatar flex-shrink-0">
+                                    @review.UserName.Substring(0, 1).ToUpper()
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h6 class="fw-bold mb-0 text-dark">@review.UserName</h6>
+                                            <div class="text-muted small">@review.Date.ToString("MMM dd, yyyy")</div>
+                                        </div>
+                                        <div class="star-rating small">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <i class="bi @(i <= review.Rating ? "bi-star-fill" : "bi-star")"></i>
+                                            }
+                                        </div>
+                                    </div>
+                                    <p class="text-secondary mb-0">
+                                        @review.Comment
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
 </div>
 
+@* --- Waiting List Modal (Unchanged) --- *@
 <div class="modal fade" id="waitingListModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
@@ -469,14 +566,10 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-
             const forms = document.querySelectorAll('.ajax-cart-form');
-
             forms.forEach(form => {
                 form.addEventListener('submit', function (e) {
                     e.preventDefault();
-
-                    // Capture where this specific form wants to go on success
                     const nextUrl = this.getAttribute('data-next-url');
                     const formData = new FormData(this);
 
@@ -486,36 +579,24 @@
                     })
                     .then(response => response.json())
                     .then(data => {
-
-                        // 1. LOGIN NEEDED
                         if (data.requireLogin) {
-                            // If they clicked "Buy Now", we probably want to send them back to checkout after login
-                            // For now, standard login redirect:
                             window.location.href = '/User/ViewLogin';
                             return;
                         }
-
-                        // 2. FULL -> OPEN WAITING LIST
                         if (data.isFull) {
                             document.getElementById('wl_packageId').value = data.packageId;
                             document.getElementById('wl_packageDateId').value = data.packageDateId;
                             document.getElementById('wl_requestedAmount').value = data.requestedAmount;
-
                             var myModal = new bootstrap.Modal(document.getElementById('waitingListModal'));
                             myModal.show();
                         }
-                        // 3. SUCCESS -> REDIRECT BASED ON BUTTON CLICKED
                         else if (data.success) {
                             if (nextUrl.includes("/Order/Checkout")) {
-                                // Append the specific ID so the checkout ignores the rest of the cart
                                 window.location.href = nextUrl + "?bookingId=" + data.bookingId;
-                            }
-                            else {
-                                // Standard "Add to Cart" flow
+                            } else {
                                 window.location.href = nextUrl;
                             }
-                        }
-                        else {
+                        } else {
                             alert(data.message || "An error occurred.");
                         }
                     })

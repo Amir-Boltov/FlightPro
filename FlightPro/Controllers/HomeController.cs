@@ -14,65 +14,78 @@ public class HomeController : Controller
 
     public IActionResult Index()
     {
-        var featuredPackages = new List<PackageModel>();
+        // ????? 1: ?????? ?????
+        List<PackageModel> hotDeals = new List<PackageModel>();
+        // ????? 2: ????????
+        List<PackageReviewModel> allReviews = new List<PackageReviewModel>();
+
         string connectionString = _configuration.GetConnectionString("myConnect");
 
-        using (var conn = new SqlConnection(connectionString))
+        using (SqlConnection conn = new SqlConnection(connectionString))
         {
             conn.Open();
 
-            // UPDATED SQL:
-            // 1. Join PackageDates (pd) to get the Price/Discount info
-            // 2. Filter for Future Dates only
-            // 3. Sort by the biggest cash saving (Price - DiscountedPrice)
-
-            string sql = @"
-            SELECT TOP 3 
-                p.Id, 
-                p.Title, 
-                d.Name as Destination, 
-                d.Country, 
-                ISNULL(pi.Url, '/images/default.jpg') as MainImageUrl,
-                pd.Price, 
-                pd.DiscountedPrice,
-                pd.StartDate
+            // --- ?????? 1: ????? ?????? (Hot Deals) ---
+            string dealsSql = @"
+            SELECT TOP 3 p.Id, p.Title, d.Name as City, d.Country, 
+                   pd.Price, pd.DiscountedPrice, pi.Url
             FROM Packages p
-            INNER JOIN PackageDates pd ON p.Id = pd.PackageId
-            INNER JOIN Destinations d ON p.DestinationId = d.Id
-            LEFT JOIN PackageImages pi ON pi.PackageId = p.Id AND pi.IsPrimary = 1
-            WHERE pd.DiscountedPrice IS NOT NULL 
-              AND pd.StartDate > GETDATE()
-              AND pd.AvailableRooms > 0
-            ORDER BY (pd.Price - pd.DiscountedPrice) DESC";
+            JOIN Destinations d ON p.DestinationId = d.Id
+            JOIN PackageDates pd ON p.Id = pd.PackageId
+            OUTER APPLY (SELECT TOP 1 Url FROM PackageImages WHERE PackageId = p.Id AND IsPrimary = 1) pi
+            WHERE pd.DiscountedPrice IS NOT NULL AND pd.StartDate > GETDATE()
+            ORDER BY pd.StartDate ASC";
 
-            using (var cmd = new SqlCommand(sql, conn))
+            using (SqlCommand cmd = new SqlCommand(dealsSql, conn))
             {
-                using (var reader = cmd.ExecuteReader())
+                using (SqlDataReader reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        featuredPackages.Add(new PackageModel
+                        hotDeals.Add(new PackageModel
                         {
                             Id = (int)reader["Id"],
                             Title = reader["Title"].ToString(),
-                            Destination = reader["Destination"].ToString(),
+                            Destination = reader["City"].ToString(),
                             Country = reader["Country"].ToString(),
-                            MainImageUrl = reader["MainImageUrl"].ToString(),
-
-                            // Map the specific deal we found to the Model properties
-                            // If you are using the new 'DisplayPrice' property, use that:
+                            MainImageUrl = reader["Url"] != DBNull.Value ? reader["Url"].ToString() : "/img/default.jpg",
                             DisplayPrice = (decimal)reader["Price"],
+                            DisplayDiscountedPrice = (decimal)reader["DiscountedPrice"]
+                        });
+                    }
+                }
+            }
 
-                            // If your View still uses 'DiscountedPrice', map it here:
-                            DisplayDiscountedPrice = reader["DiscountedPrice"] as decimal?,
+            // --- ?????? 2: ????? ?? ???????? (Reviews) ---
+            // ????? ?? ?-6 ????????
+            string reviewsSql = @"
+            SELECT TOP 6 r.UserName, r.Rating, r.Comment, r.Date
+            FROM SiteReviews r
+            ORDER BY r.Date DESC";
 
-                            // Use DisplayDate to show which specific date this deal is for
-                            DisplayStartDate = (DateTime)reader["StartDate"]
+            using (SqlCommand cmd = new SqlCommand(reviewsSql, conn))
+            {
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        allReviews.Add(new PackageReviewModel
+                        {
+                            UserName = reader["UserName"].ToString(),
+                            Rating = (int)reader["Rating"],
+                            Comment = reader["Comment"].ToString(),
+                            Date = (DateTime)reader["Date"]
                         });
                     }
                 }
             }
         }
-        return View(featuredPackages);
+
+        // ????? ?-Tuple (?????? ???????)
+        // Item1 = hotDeals
+        // Item2 = allReviews
+        var model = Tuple.Create(hotDeals, allReviews);
+
+        return View(model);
     }
 }
