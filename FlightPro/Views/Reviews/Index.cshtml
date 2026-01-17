@@ -1,11 +1,9 @@
-﻿@using Microsoft.AspNetCore.Http
-@inject IHttpContextAccessor HttpContextAccessor
-@model FlightPro.Models.ReviewsPageViewModel
+﻿@model FlightPro.Models.ReviewsPageViewModel
 
 @{
-    ViewData["Title"] = "Customer Reviews";
-    var userId = HttpContextAccessor.HttpContext.Session.GetInt32("UserId");
-    bool isLoggedIn = userId != null;
+    ViewData["Title"] = "My Reviews";
+    // We cast the ViewBag to a list so we can check the count safely
+    var packageList = ViewBag.Packages as List<SelectListItem>;
 }
 
 <style>
@@ -34,17 +32,11 @@
 <div class="container mt-5 mb-5">
 
     <div class="text-center mb-5">
-        <h1 class="display-4 fw-bold">Customer Reviews</h1>
-        <p class="lead text-muted">See what our community is saying about their journeys.</p>
+        <h1 class="display-4 fw-bold">My Review History</h1>
+        <p class="lead text-muted">Manage the feedback you've shared with the community.</p>
         <hr class="w-25 mx-auto text-warning opacity-100" style="height: 3px;">
     </div>
 
-    @if (TempData["Error"] != null)
-    {
-        <div class="alert alert-danger rounded-pill text-center shadow-sm">
-            <i class="bi bi-exclamation-circle-fill me-2"></i> @TempData["Error"]
-        </div>
-    }
     @if (TempData["Message"] != null)
     {
         <div class="alert alert-success rounded-pill text-center shadow-sm">
@@ -58,25 +50,16 @@
             <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
                 <h3 class="fw-bold"><i class="bi bi-laptop me-2"></i>Site Reviews</h3>
 
-                @if (isLoggedIn)
-                {
-                    <button type="button" class="btn btn-outline-dark rounded-pill btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#siteReviewModal">
-                        <i class="bi bi-plus-lg"></i> Write Review
-                    </button>
-                }
-                else
-                {
-                    <a asp-controller="User" asp-action="ViewLogin" class="btn btn-outline-dark rounded-pill btn-sm">
-                        Login to Review
-                    </a>
-                }
+                <button type="button" class="btn btn-outline-dark rounded-pill btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#siteReviewModal">
+                    <i class="bi bi-plus-lg"></i> Write Review
+                </button>
             </div>
 
             @if (Model.GeneralReviews.Count == 0)
             {
                 <div class="text-center py-5 text-muted border rounded bg-light">
                     <i class="bi bi-chat-square-dots fs-1 mb-2"></i>
-                    <p>No reviews for the site yet.</p>
+                    <p>You haven't reviewed the website yet.</p>
                 </div>
             }
             else
@@ -87,14 +70,11 @@
                         <div class="card review-card shadow-sm" style="background-color: #fffbe6;">
                             <div class="card-body p-3">
                                 <div class="d-flex align-items-center mb-2">
-                                    <div class="avatar-circle bg-warning text-dark me-3 shadow-sm">
-                                        @(review.UserName?.Length > 0 ? review.UserName[0].ToString().ToUpper() : "U")
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-0 fw-bold">@review.UserName</h6>
+                                    <div class="me-auto">
+                                        <h6 class="mb-0 fw-bold">My Feedback</h6>
                                         <small class="text-muted" style="font-size: 0.8rem;">@review.Date.ToString("MMM dd, yyyy")</small>
                                     </div>
-                                    <div class="ms-auto text-warning small">
+                                    <div class="text-warning small">
                                         @for (int i = 0; i < review.Rating; i++)
                                         {
                                             <i class="bi bi-star-fill"></i>
@@ -119,25 +99,16 @@
             <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
                 <h3 class="fw-bold"><i class="bi bi-airplane me-2"></i>Trip Reviews</h3>
 
-                @if (isLoggedIn)
-                {
-                    <button type="button" class="btn btn-warning rounded-pill btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#packageReviewModal">
-                        <i class="bi bi-star-fill me-1"></i> Rate a Trip
-                    </button>
-                }
-                else
-                {
-                    <a asp-controller="User" asp-action="ViewLogin" class="btn btn-outline-dark rounded-pill btn-sm">
-                        Login to Rate
-                    </a>
-                }
+                <button type="button" class="btn btn-warning rounded-pill btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#packageReviewModal">
+                    <i class="bi bi-star-fill me-1"></i> Rate a Trip
+                </button>
             </div>
 
             @if (Model.PackageReviews.Count == 0)
             {
                 <div class="text-center py-5 text-muted border rounded bg-light">
                     <i class="bi bi-geo-alt fs-1 mb-2"></i>
-                    <p>No trip reviews yet.</p>
+                    <p>You haven't reviewed any trips yet.</p>
                 </div>
             }
             else
@@ -151,22 +122,19 @@
                                     <span class="badge bg-dark text-warning">
                                         <i class="bi bi-pin-map-fill me-1"></i> @review.PackageTitle
                                     </span>
-                                    <small class="text-muted">@review.Date.ToString("dd/MM/yyyy")</small>
+                                    <small class="text-muted">@review.Date.ToString("MMM dd, yyyy")</small>
                                 </div>
 
-                                <div class="d-flex align-items-center mb-2">
-                                    <div class="avatar-circle bg-light text-dark border me-3" style="width: 35px; height: 35px; font-size: 0.9rem;">
-                                        @(review.UserName?.Length > 0 ? review.UserName[0].ToString().ToUpper() : "U")
-                                    </div>
-                                    <span class="fw-bold small">@review.UserName</span>
-                                    <div class="ms-auto text-warning small">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold small">My Rating:</span>
+                                    <div class="text-warning small">
                                         @for (int i = 0; i < review.Rating; i++)
                                         {
                                             <i class="bi bi-star-fill"></i>
                                         }
                                     </div>
                                 </div>
-
+                                <hr class="my-2" />
                                 <p class="card-text text-muted mb-0">
                                     "@review.Comment"
                                 </p>
@@ -220,14 +188,14 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
-            @if (ViewBag.Packages != null && ((List<FlightPro.Controllers.SelectListItem>)ViewBag.Packages).Count > 0)
+            @if (packageList != null && packageList.Count > 0)
             {
                 <form asp-controller="Reviews" asp-action="AddPackageReview" method="post">
                     <div class="modal-body">
                         <div class="form-floating mb-3">
                             <select class="form-select" name="packageId" id="packId" required>
                                 <option value="" disabled selected>Select trip...</option>
-                                @foreach (var item in ViewBag.Packages)
+                                @foreach (var item in packageList)
                                 {
                                     <option value="@item.Value">@item.Text</option>
                                 }

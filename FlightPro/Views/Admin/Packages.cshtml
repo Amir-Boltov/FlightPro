@@ -180,6 +180,16 @@
                             <i class="bi bi-list-check"></i> Waiting Lists
                         </a>
                     </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" asp-action="Destinations">
+                            <i class="bi bi-map"></i> Manage Destinations
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" asp-action="Reviews">
+                            <i class="bi bi-star-half"></i> View/Manage Reviews
+                        </a>
+                    </li>
                 </ul>
             </div>
         </nav>
@@ -306,72 +316,97 @@
 </div>
 
 <script>
-    // --- סקריפט לגרף ---
     document.addEventListener("DOMContentLoaded", function() {
-        var ctx = document.getElementById('packagesChart').getContext('2d');
 
-        // נתונים שמגיעים מה-Controller
-        var labels = @Html.Raw(Json.Serialize(Model.TopPackageNames));
-        var data = @Html.Raw(Json.Serialize(Model.TopPackageSales));
+        // ==========================================
+        // 1. SEARCH FUNCTIONALITY (Safe & Isolated)
+        // ==========================================
+        const searchInput = document.getElementById('packageSearchInput');
+        const tableBody = document.querySelector('#packagesTable tbody');
+        const noResultsMsg = document.getElementById('noResultsMsg');
 
-        var myChart = new Chart(ctx, {
-            type: 'bar', // גרף עמודות
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Total Sales',
-                    data: data,
-                    backgroundColor: [
-                        'rgba(54, 162, 235, 0.7)', // כחול
-                        'rgba(255, 206, 86, 0.7)', // צהוב
-                        'rgba(75, 192, 192, 0.7)', // טורקיז
-                        'rgba(153, 102, 255, 0.7)', // סגול
-                        'rgba(255, 99, 132, 0.7)'  // אדום
-                    ],
-                    borderColor: [
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 99, 132, 1)'
-                    ],
-                    borderWidth: 1,
-                    borderRadius: 5 // פינות עגולות לעמודות
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false } // הסתרת מקרא כי זה ברור
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: 1 } // להציג רק מספרים שלמים
-                    },
-                    x: {
-                        grid: { display: false }
+        if (searchInput && tableBody) {
+            searchInput.addEventListener('keyup', function() {
+                const searchValue = this.value.toLowerCase().trim();
+                const rows = tableBody.getElementsByTagName('tr');
+                let hasVisibleRows = false;
+
+                for (let i = 0; i < rows.length; i++) {
+                    const rowText = rows[i].textContent.toLowerCase();
+
+                    if (rowText.includes(searchValue)) {
+                        rows[i].style.display = '';
+                        hasVisibleRows = true;
+                    } else {
+                        rows[i].style.display = 'none';
                     }
                 }
+
+                // Toggle "No Results" message
+                if (noResultsMsg) {
+                    noResultsMsg.classList.toggle('d-none', hasVisibleRows);
+                }
+            });
+        } else {
+            console.error("Search elements not found! Check IDs.");
+        }
+
+        // ==========================================
+        // 2. TOOLTIPS INITIALIZATION
+        // ==========================================
+        try {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        } catch (e) {
+            console.log("Bootstrap tooltips failed to load (minor issue).");
+        }
+
+        try {
+            var ctx = document.getElementById('packagesChart');
+            if (ctx) {
+                var labels = @Html.Raw(Json.Serialize(Model.TopPackageNames ?? new List<string>()));
+                var data = @Html.Raw(Json.Serialize(Model.TopPackageSales ?? new List<int>()));
+
+                new Chart(ctx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Total Sales',
+                            data: data,
+                            backgroundColor: [
+                                'rgba(54, 162, 235, 0.7)',
+                                'rgba(255, 206, 86, 0.7)',
+                                'rgba(75, 192, 192, 0.7)',
+                                'rgba(153, 102, 255, 0.7)',
+                                'rgba(255, 99, 132, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(255, 206, 86, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(153, 102, 255, 1)',
+                                'rgba(255, 99, 132, 1)'
+                            ],
+                            borderWidth: 1,
+                            borderRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
             }
-        });
-    });
-
-    // --- שאר הסקריפטים (Tooltip + Search) ---
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) })
-
-    document.getElementById('packageSearchInput').addEventListener('keyup', function() {
-        var searchValue = this.value.toLowerCase();
-        var tableRows = document.querySelectorAll('#packagesTable tbody tr');
-        var hasVisibleRows = false;
-        tableRows.forEach(function(row) {
-            var rowText = row.textContent.toLowerCase();
-            if (rowText.includes(searchValue)) { row.style.display = ''; hasVisibleRows = true; }
-            else { row.style.display = 'none'; }
-        });
-        var noResultsDiv = document.getElementById('noResultsMsg');
-        hasVisibleRows ? noResultsDiv.classList.add('d-none') : noResultsDiv.classList.remove('d-none');
+        } catch (error) {
+            console.error("Chart failed to load:", error);
+        }
     });
 </script>

@@ -1,6 +1,7 @@
 ﻿using FlightPro.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace FlightPro.Controllers
 {
@@ -16,6 +17,13 @@ namespace FlightPro.Controllers
         // === דף הראשי של הביקורות ===
         public IActionResult Index()
         {
+            // 1. Check if user is logged in. If not, they can't see "My Reviews"
+            int? currentUserId = HttpContext.Session.GetInt32("UserId");
+            if (currentUserId == null)
+            {
+                return RedirectToAction("ViewLogin", "User");
+            }
+
             string connectionString = _configuration.GetConnectionString("myConnect");
 
             var viewModel = new ReviewsPageViewModel
@@ -30,90 +38,83 @@ namespace FlightPro.Controllers
             {
                 connection.Open();
 
-                // 1. שליפת ביקורות כלליות על האתר
-                string sqlSite = "SELECT * FROM SiteReviews ORDER BY Date DESC";
+                // 2. Fetch ONLY THIS USER'S Site Reviews
+                string sqlSite = "SELECT * FROM SiteReviews WHERE UserId = @UserId ORDER BY Date DESC";
                 using (SqlCommand command = new SqlCommand(sqlSite, connection))
-                using (SqlDataReader reader = command.ExecuteReader())
                 {
-                    while (reader.Read())
+                    command.Parameters.AddWithValue("@UserId", currentUserId);
+                    using (SqlDataReader reader = command.ExecuteReader())
                     {
-                        viewModel.GeneralReviews.Add(new SiteReviewModel
+                        while (reader.Read())
                         {
-                            Id = (int)reader["Id"],
-                            UserName = reader["UserName"].ToString(),
-                            Comment = reader["Comment"].ToString(),
-                            Rating = (int)reader["Rating"],
-                            Date = (DateTime)reader["Date"]
-                        });
+                            viewModel.GeneralReviews.Add(new SiteReviewModel
+                            {
+                                Id = (int)reader["Id"],
+                                UserName = reader["UserName"].ToString(),
+                                Comment = reader["Comment"].ToString(),
+                                Rating = (int)reader["Rating"],
+                                Date = (DateTime)reader["Date"]
+                            });
+                        }
                     }
                 }
 
-                // 2. שליפת ביקורות על חבילות (להצגה בדף)
+                // 3. Fetch ONLY THIS USER'S Package Reviews
                 string sqlPackage = @"
                     SELECT pr.*, p.Title as PackageTitle 
                     FROM PackageReviews pr
                     JOIN Packages p ON pr.PackageId = p.Id
+                    WHERE pr.UserId = @UserId  -- Filter by User
                     ORDER BY pr.Date DESC";
 
                 using (SqlCommand command = new SqlCommand(sqlPackage, connection))
-                using (SqlDataReader reader = command.ExecuteReader())
                 {
-                    while (reader.Read())
+                    command.Parameters.AddWithValue("@UserId", currentUserId);
+                    using (SqlDataReader reader = command.ExecuteReader())
                     {
-                        viewModel.PackageReviews.Add(new PackageReviewModel
+                        while (reader.Read())
                         {
-                            Id = (int)reader["Id"],
-                            UserName = reader["UserName"].ToString(),
-                            PackageId = (int)reader["PackageId"],
-                            PackageTitle = reader["PackageTitle"].ToString(),
-                            Comment = reader["Comment"].ToString(),
-                            Rating = (int)reader["Rating"],
-                            Date = (DateTime)reader["Date"]
-                        });
+                            viewModel.PackageReviews.Add(new PackageReviewModel
+                            {
+                                Id = (int)reader["Id"],
+                                UserName = reader["UserName"].ToString(),
+                                PackageId = (int)reader["PackageId"],
+                                PackageTitle = reader["PackageTitle"].ToString(),
+                                Comment = reader["Comment"].ToString(),
+                                Rating = (int)reader["Rating"],
+                                Date = (DateTime)reader["Date"]
+                            });
+                        }
                     }
                 }
 
-                // 3. שליפת חבילות ל-Dropdown (מותאם לטבלאות Bookings ו-PackageDates)
-                int? currentUserId = HttpContext.Session.GetInt32("UserId");
+                // 4. Dropdown Logic: Only Booked Packages where Trip has ENDED
+                string sqlUserPackages = @"
+                    SELECT DISTINCT p.Id, p.Title 
+                    FROM Bookings b
+                    JOIN PackageDates pd ON b.PackageDateId = pd.Id
+                    JOIN Packages p ON pd.PackageId = p.Id
+                    WHERE b.UserId = @UserId 
+                    AND pd.EndDate < GETDATE()"; // Ensures trip is in the past
 
-                if (currentUserId != null)
+                using (SqlCommand command = new SqlCommand(sqlUserPackages, connection))
                 {
-                    // הסבר לשאילתה:
-                    // 1. מתחילים ב-Bookings (מה המשתמש הזמין)
-                    // 2. מחברים ל-PackageDates (כדי לבדוק מתי הטיול נגמר)
-                    // 3. מחברים ל-Packages (כדי לקבל את שם הטיול)
-                    // 4. תנאי: הטיול נגמר (EndDate < GETDATE)
-
-                    string sqlUserPackages = @"
-                        SELECT DISTINCT p.Id, p.Title 
-                        FROM Bookings b
-                        JOIN PackageDates pd ON b.PackageDateId = pd.Id
-                        JOIN Packages p ON pd.PackageId = p.Id
-                        WHERE b.UserId = @UserId 
-                        AND pd.EndDate < GETDATE()";
-
-                    using (SqlCommand command = new SqlCommand(sqlUserPackages, connection))
+                    command.Parameters.AddWithValue("@UserId", currentUserId);
+                    using (SqlDataReader reader = command.ExecuteReader())
                     {
-                        command.Parameters.AddWithValue("@UserId", currentUserId);
-
-                        using (SqlDataReader reader = command.ExecuteReader())
+                        while (reader.Read())
                         {
-                            while (reader.Read())
+                            packagesList.Add(new SelectListItem
                             {
-                                packagesList.Add(new SelectListItem
-                                {
-                                    Value = reader["Id"].ToString(),
-                                    Text = reader["Title"].ToString()
-                                });
-                            }
+                                Value = reader["Id"].ToString(),
+                                Text = reader["Title"].ToString()
+                            });
                         }
                     }
                 }
             }
 
-            // מעבירים את הרשימה ל-View
             ViewBag.Packages = packagesList;
-
             return View(viewModel);
         }
 
@@ -183,11 +184,5 @@ namespace FlightPro.Controllers
             TempData["Message"] = "Thank you! Your trip review has been posted.";
             return RedirectToAction("Index");
         }
-    }
-
-    public class SelectListItem
-    {
-        public string Value { get; set; }
-        public string Text { get; set; }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FlightPro.Models
 {
@@ -20,7 +21,16 @@ namespace FlightPro.Models
 
         [Required(ErrorMessage = "Password is required")]
         [DataType(DataType.Password)]
-        public string Password { get; set; } // Will be saved into 'PasswordHash' column
+        [MinLength(8, ErrorMessage = "Password must be at least 8 characters.")]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$",
+            ErrorMessage = "Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character.")]
+        public string Password { get; set; }
+
+        [NotMapped]
+        [Required(ErrorMessage = "Please confirm your password")]
+        [DataType(DataType.Password)]
+        [Compare("Password", ErrorMessage = "Passwords do not match.")]
+        public string ConfirmPassword { get; set; }
 
         // These are set automatically by the controller, not the user
         public string? Role { get; set; }

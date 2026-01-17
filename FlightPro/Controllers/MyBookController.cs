@@ -553,6 +553,8 @@ namespace FlightPro.Controllers
             string packageTitle = "";
             bool cancelSuccess = false;
 
+            string errorMessage = null;
+
             using (SqlConnection conn = new SqlConnection(_configuration.GetConnectionString("myConnect")))
             {
                 conn.Open();
@@ -565,11 +567,15 @@ namespace FlightPro.Controllers
 
                         // 1. Get Booking Info + User Info for Email
                         string getSql = @"
-                    SELECT b.PackageDateId, b.Amount,
-                           u.Email, u.FirstName, p.Title 
+                    SELECT 
+                        b.PackageDateId, b.Amount,
+                        u.Email, u.FirstName, 
+                        p.Title, p.CancellationDeadlineDays,
+                        pd.StartDate
                     FROM Bookings b
                     JOIN Users u ON b.UserId = u.Id
                     JOIN Packages p ON b.PackageId = p.Id
+                    JOIN PackageDates pd ON b.PackageDateId = pd.Id
                     WHERE b.Id = @Id AND b.UserId = @UserId AND b.Status != 'Canceled'";
 
                         using (SqlCommand cmd = new SqlCommand(getSql, conn, transaction))
@@ -580,19 +586,37 @@ namespace FlightPro.Controllers
                             {
                                 if (reader.Read())
                                 {
-                                    packageDateId = (int)reader["PackageDateId"];
-                                    amountToReturn = reader["Amount"] != DBNull.Value ? (int)reader["Amount"] : 0;
+                                    DateTime startDate = (DateTime)reader["StartDate"];
+                                    int deadlineDays = (int)reader["CancellationDeadlineDays"];
+                                    DateTime lastCancelDate = startDate.AddDays(-deadlineDays);
 
-                                    // Capture info
-                                    userEmail = reader["Email"].ToString();
-                                    userName = reader["FirstName"].ToString();
-                                    packageTitle = reader["Title"].ToString();
+                                    if (DateTime.Now > lastCancelDate)
+                                    {
+                                        errorMessage = $"Cancellation failed. The deadline was {lastCancelDate.ToShortDateString()}.";
+                                    }
+                                    else
+                                    {
+                                        packageDateId = (int)reader["PackageDateId"];
+                                        amountToReturn = reader["Amount"] != DBNull.Value ? (int)reader["Amount"] : 0;
+
+                                        // Capture info
+                                        userEmail = reader["Email"].ToString();
+                                        userName = reader["FirstName"].ToString();
+                                        packageTitle = reader["Title"].ToString();
+                                    }
                                 }
                                 else
                                 {
                                     return RedirectToAction("OrderHistory");
                                 }
                             }
+                        }
+                        if (errorMessage != null)
+                        {
+                            // No need to rollback because we haven't changed anything yet
+                            // Just break out
+                            TempData["Error"] = errorMessage; // Show this to user
+                            return RedirectToAction("OrderHistory");
                         }
 
                         dateIdToPromote = packageDateId;
@@ -646,9 +670,7 @@ namespace FlightPro.Controllers
             // 2. Check Waitlist (Now Awaited)
             if (dateIdToPromote > 0)
             {
-                // This will now internally send an email to the promoted person too!
                 await _waitlistService.TryPromoteFromWaitlist(dateIdToPromote);
-                // Note: Make sure you inject the service as 'WaitlistService' or whatever interface you use.
             }
 
             return RedirectToAction("OrderHistory");

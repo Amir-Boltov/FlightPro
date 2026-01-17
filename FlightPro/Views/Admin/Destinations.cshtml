@@ -3,56 +3,222 @@
     ViewData["Title"] = "Manage Destinations";
 }
 
-<div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>Manage Destinations</h2>
-        <a asp-action="CreateDestination" class="btn btn-primary">
-            <i class="bi bi-plus-lg"></i> Add New
-        </a>
-    </div>
-
-    @if (TempData["Success"] != null)
-    {
-        <div class="alert alert-success">@TempData["Success"]</div>
-    }
-    @if (TempData["Error"] != null)
-    {
-        <div class="alert alert-danger">@TempData["Error"]</div>
+<style>
+    /* --- General Admin Styles (Matches Users.cshtml) --- */
+    body {
+        background-color: #f8f9fa;
     }
 
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <table class="table table-hover table-striped mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Country</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var dest in Model)
-                    {
-                        <tr>
-                            <td>@dest.Id</td>
-                            <td class="fw-bold">@dest.Name</td>
-                            <td>@dest.Country</td>
-                            <td class="text-end">
-                                <form asp-action="DeleteDestination" method="post" class="d-inline"
-                                      onsubmit="return confirm('Are you sure you want to delete @dest.Name?');">
+    .sidebar {
+        min-height: 100vh;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+        background: #fff;
+    }
 
-                                    <input type="hidden" name="id" value="@dest.Id" />
+    .nav-link {
+        color: #333;
+        font-weight: 500;
+        padding: 10px 15px;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
 
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="bi bi-trash"></i> Delete
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+        .nav-link:hover {
+            background-color: #f8f9fa;
+            color: #0d6efd;
+        }
+
+        .nav-link.active {
+            background-color: #e9ecef;
+            color: #0d6efd;
+            font-weight: 700;
+        }
+
+        .nav-link i {
+            margin-right: 10px;
+            font-size: 1.1rem;
+        }
+
+    /* Table & Container Styles */
+    .table-container {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .table thead th {
+        background-color: #212529; /* Dark header to match preference, or change to #f8f9fa for light */
+        color: #fff;
+        border: none;
+        font-weight: 600;
+        padding: 15px;
+    }
+
+    .table tbody td {
+        padding: 15px;
+        vertical-align: middle;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    /* Action Buttons */
+    .action-btn {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        transition: all 0.2s ease;
+        margin-left: 5px;
+        font-size: 0.9rem;
+    }
+
+    .btn-delete {
+        background-color: #ffe5e5;
+        color: #dc3545;
+    }
+
+        .btn-delete:hover {
+            background-color: #dc3545;
+            color: white;
+            transform: translateY(-2px);
+        }
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+
+        <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse show">
+            <div class="position-sticky pt-3">
+                <div class="text-center mb-4">
+                    <h5 class="fw-bold">Admin Panel</h5>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" asp-action="Index" asp-controller="Admin">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" asp-action="Packages">
+                            <i class="bi bi-box-seam"></i> Manage Packages
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" asp-action="Users">
+                            <i class="bi bi-people"></i> Manage Users
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" asp-action="Waitlists">
+                            <i class="bi bi-list-check"></i> Waiting Lists
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link active" asp-action="Destinations">
+                            <i class="bi bi-map"></i> Manage Destinations
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" asp-action="Reviews">
+                            <i class="bi bi-star-half"></i> View/Manage Reviews
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 bg-light min-vh-100">
+
+            <div class="pt-4 pb-2 mb-4 border-bottom d-flex justify-content-between align-items-center">
+                <h2 class="h2">Manage Destinations</h2>
+            </div>
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show shadow-sm rounded-3" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i> @TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show shadow-sm rounded-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            <div class="row mb-4 align-items-center justify-content-end">
+                <div class="col-auto">
+                    <a asp-action="CreateDestination" class="btn btn-primary fw-bold shadow-sm rounded-pill px-4">
+                        <i class="bi bi-plus-lg me-1"></i> Add New Destination
+                    </a>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">ID</th>
+                                <th>Name</th>
+                                <th>Country</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model != null && Model.Any())
+                            {
+                                @foreach (var dest in Model)
+                                {
+                                    <tr>
+                                        <td class="ps-4 text-muted">#@dest.Id</td>
+                                        <td>
+                                            <span class="fw-bold text-dark" style="font-size: 1.05rem;">@dest.Name</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-secondary border">
+                                                <i class="bi bi-globe2 me-1"></i> @dest.Country
+                                            </span>
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <form asp-action="DeleteDestination" method="post" class="d-inline"
+                                                  onsubmit="return confirm('Are you sure you want to delete @dest.Name?');">
+                                                <input type="hidden" name="id" value="@dest.Id" />
+                                                <button type="submit" class="action-btn btn-delete" data-bs-toggle="tooltip" title="Delete Destination">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center py-5 text-muted">
+                                        <i class="bi bi-map display-6 mb-3 d-block"></i>
+                                        No destinations found.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
     </div>
 </div>
+
+<script>
+    // Initialize Tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>

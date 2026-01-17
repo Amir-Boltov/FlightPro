@@ -100,7 +100,8 @@ namespace FlightPro.Controllers
 
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
-                string query = "SELECT Id, FirstName, Email, Role, PasswordHash FROM Users WHERE Email = @Email";
+                // 1. UPDATE QUERY: Add 'Status' to the SELECT list
+                string query = "SELECT Id, FirstName, Email, Role, PasswordHash, Status FROM Users WHERE Email = @Email";
 
                 using (SqlCommand command = new SqlCommand(query, connection))
                 {
@@ -118,6 +119,17 @@ namespace FlightPro.Controllers
 
                             if (isPasswordValid)
                             {
+                                // 2. RETRIEVE STATUS
+                                string status = reader["Status"] != DBNull.Value ? reader["Status"].ToString() : "Active";
+
+                                // 3. CHECK STATUS: If Suspended, stop here
+                                if (status == "Suspended")
+                                {
+                                    ViewBag.Error = "Your account has been suspended. Please contact support.";
+                                    return View("ViewLogin");
+                                }
+
+                                // --- Login Success Logic ---
                                 int userId = (int)reader["Id"];
                                 string firstName = reader["FirstName"].ToString();
                                 string role = reader["Role"].ToString();
@@ -131,7 +143,7 @@ namespace FlightPro.Controllers
                             }
                         }
 
-                        // אם הגענו לפה - או שהאימייל לא קיים, או שה-Verify החזיר false
+                        // If we get here, either email not found or password incorrect
                         ViewBag.Error = "Invalid email or password.";
                         return View("ViewLogin");
                     }

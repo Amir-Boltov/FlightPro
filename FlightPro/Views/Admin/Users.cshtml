@@ -186,6 +186,16 @@
                             <i class="bi bi-list-check"></i> Waiting Lists
                         </a>
                     </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" asp-action="Destinations">
+                            <i class="bi bi-map"></i> Manage Destinations
+                        </a>
+                    </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link" asp-action="Reviews">
+                            <i class="bi bi-star-half"></i> View/Manage Reviews
+                        </a>
+                    </li>
                 </ul>
             </div>
         </nav>
@@ -278,9 +288,17 @@
                         <tbody>
                             @foreach (var user in Model)
                             {
-                                // Initials calculation
-                                var initials = string.Join("", user.FullName.Split(' ').Select(s => s[0])).ToUpper();
-                                if (initials.Length > 2) initials = initials.Substring(0, 2);
+                                var initials = "??";
+                                if (!string.IsNullOrEmpty(user.FullName))
+                                {
+                                    // Split by space but ignore empty entries (fixes double space crash)
+                                    var parts = user.FullName.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                                    if (parts.Length > 0)
+                                    {
+                                        initials = string.Join("", parts.Select(p => p[0])).ToUpper();
+                                        if (initials.Length > 2) initials = initials.Substring(0, 2);
+                                    }
+                                }
 
                                 <tr>
                                     <td class="ps-4">
@@ -348,73 +366,83 @@
 </div>
 
 <script>
-    // --- Chart Script ---
     document.addEventListener("DOMContentLoaded", function() {
-        var ctx = document.getElementById('usersChart').getContext('2d');
 
-        // Data from Razor
-        var adminCount = @adminsCount;
-        var customerCount = @customersCount;
+        // --- 1. CHART SCRIPT ---
+        var ctx = document.getElementById('usersChart');
+        if (ctx) {
+            var adminCount = @adminsCount;
+            var customerCount = @customersCount;
 
-        var myChart = new Chart(ctx, {
-            type: 'bar', // Using Bar to match your previous design preference
-            data: {
-                labels: ['Administrators', 'Customers'],
-                datasets: [{
-                    label: 'User Count',
-                    data: [adminCount, customerCount],
-                    backgroundColor: [
-                        'rgba(33, 37, 41, 0.8)', // Dark for Admin
-                        'rgba(13, 110, 253, 0.7)' // Blue for Customer
-                    ],
-                    borderColor: [
-                        'rgba(33, 37, 41, 1)',
-                        'rgba(13, 110, 253, 1)'
-                    ],
-                    borderWidth: 1,
-                    borderRadius: 5,
-                    barPercentage: 0.5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
+            new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Administrators', 'Customers'],
+                    datasets: [{
+                        label: 'User Count',
+                        data: [adminCount, customerCount],
+                        backgroundColor: ['rgba(33, 37, 41, 0.8)', 'rgba(13, 110, 253, 0.7)'],
+                        borderColor: ['rgba(33, 37, 41, 1)', 'rgba(13, 110, 253, 1)'],
+                        borderWidth: 1,
+                        borderRadius: 5,
+                        barPercentage: 0.5
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: 1 }
-                    },
-                    x: {
-                        grid: { display: false }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                        x: { grid: { display: false } }
                     }
                 }
-            }
-        });
-    });
+            });
+        }
 
-    // --- Tooltip & Search Scripts ---
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) })
-
-    document.getElementById('userSearchInput').addEventListener('keyup', function() {
-        var searchValue = this.value.toLowerCase();
-        var tableRows = document.querySelectorAll('#usersTable tbody tr');
-        var hasVisibleRows = false;
-
-        tableRows.forEach(function(row) {
-            var rowText = row.textContent.toLowerCase();
-            if (rowText.includes(searchValue)) {
-                row.style.display = '';
-                hasVisibleRows = true;
-            } else {
-                row.style.display = 'none';
-            }
+        // --- 2. TOOLTIP INITIALIZATION ---
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
         });
 
-        var noResultsDiv = document.getElementById('noResultsMsg');
-        hasVisibleRows ? noResultsDiv.classList.add('d-none') : noResultsDiv.classList.remove('d-none');
+        // --- 3. ROBUST SEARCH SCRIPT ---
+        var searchInput = document.getElementById('userSearchInput');
+
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                // Get the search term
+                var filter = this.value.toLowerCase().trim();
+
+                // Get all rows
+                var rows = document.querySelectorAll('#usersTable tbody tr');
+                var hasVisible = false;
+
+                rows.forEach(function(row) {
+                    // Safety check: ensure row has enough cells
+                    if (row.cells.length > 1) {
+                        // Cell[0] is User Name (and avatar), Cell[1] is Email
+                        var nameText = row.cells[0].textContent.toLowerCase();
+                        var emailText = row.cells[1].textContent.toLowerCase();
+
+                        // Check if term exists in Name OR Email
+                        if (nameText.indexOf(filter) > -1 || emailText.indexOf(filter) > -1) {
+                            row.style.display = "";
+                            hasVisible = true;
+                        } else {
+                            row.style.display = "none";
+                        }
+                    }
+                });
+
+                // Toggle "No Results" message
+                var noRes = document.getElementById('noResultsMsg');
+                if (noRes) {
+                    noRes.classList.toggle('d-none', hasVisible);
+                }
+            });
+        } else {
+            console.error("Search input not found! Check the ID 'userSearchInput'.");
+        }
     });
 </script>

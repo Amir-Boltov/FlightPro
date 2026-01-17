@@ -256,26 +256,42 @@
                 <div class="form-row">
                     <div class="form-group" style="flex: 1;">
                         <label>First Name</label>
-                        <input type="text" name="FirstName" class="form-control" required placeholder="First Name">
+                        <input type="text" name="FirstName" class="form-control" value="@Model?.FirstName" required placeholder="First Name">
+                        <span asp-validation-for="FirstName" class="text-danger" style="font-size:0.8rem"></span>
                     </div>
                     <div class="form-group" style="flex: 1;">
                         <label>Last Name</label>
-                        <input type="text" name="LastName" class="form-control" required placeholder="Last Name">
+                        <input type="text" name="LastName" class="form-control" value="@Model?.LastName" required placeholder="Last Name">
+                        <span asp-validation-for="LastName" class="text-danger" style="font-size:0.8rem"></span>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Email Address</label>
-                    <input type="email" name="Email" class="form-control" required placeholder="name@example.com">
+                    <input type="email" name="Email" class="form-control" value="@Model?.Email" required placeholder="name@example.com">
+                    <span asp-validation-for="Email" class="text-danger" style="font-size:0.8rem"></span>
                 </div>
 
                 <div class="form-group">
                     <label>Password</label>
-                    <input type="password" name="Password" class="form-control" required placeholder="Create a password">
+                    <input type="password" name="Password" class="form-control" required placeholder="Min 8 chars, 1 Upper, 1 Special">
+                    <span asp-validation-for="Password" class="text-danger" style="font-size:0.8rem"></span>
+                </div>
+
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <input type="password" name="ConfirmPassword" class="form-control" required placeholder="Re-enter password">
+                    <span asp-validation-for="ConfirmPassword" class="text-danger" style="font-size:0.8rem"></span>
                 </div>
 
                 <button type="submit" class="btn-register">SIGN UP</button>
             </form>
+
+            @section Scripts {
+                @{
+                    await Html.RenderPartialAsync("_ValidationScriptsPartial");
+                }
+            }
 
             <div class="login-link">
                 Already have an account? <a href="/User/ViewLogin">Login here</a>

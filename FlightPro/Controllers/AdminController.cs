@@ -48,8 +48,8 @@ namespace FlightPro.Controllers
                     // --- חלק 1: סטטיסטיקות כלליות (הקוביות למעלה) ---
                     string statsSql = @"
                 SELECT 
-                    (SELECT COUNT(*) FROM Bookings) as TotalBookings,
-                    (SELECT ISNULL(SUM(TotalPrice),0) FROM Bookings) as TotalRevenue,
+                    (SELECT COUNT(*) FROM Bookings WHERE Status = 'Confirmed') as TotalBookings,
+                    (SELECT ISNULL(SUM(TotalPrice),0) FROM Bookings WHERE Status ='Confirmed') as TotalRevenue,
                     (SELECT COUNT(*) FROM Packages) as ActivePackages,
                     (SELECT COUNT(*) FROM Users) as UsersCount";
 
@@ -93,10 +93,11 @@ namespace FlightPro.Controllers
                     }
 
                     string chartSql = @"
-                SELECT TOP 5 p.Title, COUNT(b.Id) as BookingCount
+                SELECT TOP 5 p.Title, COUNT(DISTINCT b.Id) as BookingCount
                 FROM Bookings b
                 JOIN PackageDates pd ON b.PackageDateId = pd.Id
                 JOIN Packages p ON pd.PackageId = p.Id
+                WHERE b.Status = 'Confirmed'
                 GROUP BY p.Title
                 ORDER BY BookingCount DESC";
 
@@ -165,10 +166,11 @@ namespace FlightPro.Controllers
                 // --- חלק ב': שליפת נתונים לגרף (5 החבילות הנמכרות ביותר) ---
                 // אנו עושים JOIN בין Bookings -> PackageDates -> Packages כדי לקבל את השם
                 string sqlTop = @"
-            SELECT TOP 5 p.Title, COUNT(b.Id) as SalesCount
+            SELECT TOP 5 p.Title, COUNT(DISTINCT b.Id) as SalesCount
             FROM Bookings b
             JOIN PackageDates pd ON b.PackageDateId = pd.Id
             JOIN Packages p ON pd.PackageId = p.Id
+            WHERE b.Status = 'Confirmed'
             GROUP BY p.Title
             ORDER BY SalesCount DESC";
 
@@ -1276,6 +1278,113 @@ namespace FlightPro.Controllers
 
             TempData["Success"] = "User removed from waitlist successfully.";
             return RedirectToAction("Waitlists");
+        }
+
+        public IActionResult Reviews()
+        {
+            // 1. Security Check
+            if (HttpContext.Session.GetString("UserRole") != "Admin")
+            {
+                return RedirectToAction("ViewLogin", "User");
+            }
+
+            var model = new AdminReviewsViewModel();
+            string connStr = _configuration.GetConnectionString("myConnect");
+
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+
+                // --- FETCH SITE REVIEWS ---
+                string siteSql = "SELECT Id, UserName, Comment, Rating, Date FROM SiteReviews ORDER BY Date DESC";
+                using (SqlCommand cmd = new SqlCommand(siteSql, conn))
+                {
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            model.SiteReviews.Add(new SiteReviewModel
+                            {
+                                Id = (int)reader["Id"],
+                                UserName = reader["UserName"].ToString(),
+                                Comment = reader["Comment"].ToString(),
+                                Rating = (int)reader["Rating"],
+                                Date = (DateTime)reader["Date"]
+                            });
+                        }
+                    }
+                }
+
+                // --- FETCH PACKAGE REVIEWS (WITH JOIN) ---
+                // Joining PackageReviews with Packages table to get the Package Title
+                string pkgSql = @"
+            SELECT pr.Id, pr.UserName, pr.Comment, pr.Rating, pr.Date, p.Title 
+            FROM PackageReviews pr
+            INNER JOIN Packages p ON pr.PackageId = p.Id
+            ORDER BY pr.Date DESC";
+
+                using (SqlCommand cmd = new SqlCommand(pkgSql, conn))
+                {
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            model.PackageReviews.Add(new PackageReviewModel
+                            {
+                                Id = (int)reader["Id"],
+                                UserName = reader["UserName"].ToString(),
+                                Comment = reader["Comment"].ToString(),
+                                Rating = (int)reader["Rating"],
+                                Date = (DateTime)reader["Date"],
+                                PackageTitle = reader["Title"].ToString() // Maps to p.Title
+                            });
+                        }
+                    }
+                }
+            }
+
+            return View(model);
+        }
+
+
+        [HttpPost]
+        public IActionResult DeleteSiteReview(int id)
+        {
+            if (HttpContext.Session.GetString("UserRole") != "Admin") return RedirectToAction("ViewLogin", "User");
+
+            string connStr = _configuration.GetConnectionString("myConnect");
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+                string sql = "DELETE FROM SiteReviews WHERE Id = @Id";
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", id);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            TempData["Success"] = "Site review deleted successfully.";
+            return RedirectToAction("Reviews");
+        }
+
+        [HttpPost]
+        public IActionResult DeletePackageReview(int id)
+        {
+            if (HttpContext.Session.GetString("UserRole") != "Admin") return RedirectToAction("ViewLogin", "User");
+
+            string connStr = _configuration.GetConnectionString("myConnect");
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+                string sql = "DELETE FROM PackageReviews WHERE Id = @Id";
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Id", id);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            TempData["Success"] = "Package review deleted successfully.";
+            return RedirectToAction("Reviews");
         }
 
     }
