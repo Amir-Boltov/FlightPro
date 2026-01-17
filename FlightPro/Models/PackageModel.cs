@@ -30,6 +30,8 @@ namespace FlightPro.Models
         public decimal? DisplayDiscountedPrice { get; set; }
         public int DisplayAvailableRooms { get; set; }
         public DateTime? DisplayDiscountEndDate { get; set; }
+        // בתוך הקובץ PackageModel.cs
+        public List<PackageReviewModel> Reviews { get; set; } = new List<PackageReviewModel>();
 
         public List<PackageDateModel> AvailableSchedules { get; set; } = new List<PackageDateModel>();
     }

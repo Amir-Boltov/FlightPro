@@ -29,14 +29,12 @@ namespace FlightPro.Controllers
         // GET: Admin Dashboard
         public IActionResult Index()
         {
-            // 1. אתחול המודל
+            // 1. אתחול המודל והרשימות (חשוב מאוד כדי למנוע שגיאות Null)
             var model = new AdminDashboardViewModel
             {
                 RecentBookings = new List<BookingViewModel>(),
-
-                // משאיר אותם כרשימות ריקות כדי שהאתר לא יקרוס אם ה-HTML מחפש אותם
                 ChartLabels = new List<string>(),
-                ChartData = new List<decimal>()
+                ChartData = new List<decimal>() // במודל שלך זה decimal
             };
 
             string connStr = _configuration.GetConnectionString("myConnect");
@@ -47,7 +45,7 @@ namespace FlightPro.Controllers
                 {
                     conn.Open();
 
-                    // --- חלק 1: סטטיסטיקות (קוביות) ---
+                    // --- חלק 1: סטטיסטיקות כלליות (הקוביות למעלה) ---
                     string statsSql = @"
                 SELECT 
                     (SELECT COUNT(*) FROM Bookings) as TotalBookings,
@@ -93,12 +91,34 @@ namespace FlightPro.Controllers
                             });
                         }
                     }
+
+                    string chartSql = @"
+                SELECT TOP 5 p.Title, COUNT(b.Id) as BookingCount
+                FROM Bookings b
+                JOIN PackageDates pd ON b.PackageDateId = pd.Id
+                JOIN Packages p ON pd.PackageId = p.Id
+                GROUP BY p.Title
+                ORDER BY BookingCount DESC";
+
+                    using (SqlCommand cmd = new SqlCommand(chartSql, conn))
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            // 1. שם החבילה הולך ל-Labels
+                            model.ChartLabels.Add(reader["Title"].ToString());
+
+                            // 2. הכמות הולכת ל-Data
+                            // בגלל שבמודל הגדרת decimal, אנחנו ממירים את המספר ל-decimal
+                            int count = Convert.ToInt32(reader["BookingCount"]);
+                            model.ChartData.Add((decimal)count);
+                        }
+                    }
                 }
             }
             catch (Exception ex)
             {
-                // אם יש שגיאה בחיבור, נראה אותה ב-Output ולא נקרוס
-                Console.WriteLine("Error: " + ex.Message);
+                Console.WriteLine("Error in Admin Dashboard: " + ex.Message);
             }
 
             return View(model);
