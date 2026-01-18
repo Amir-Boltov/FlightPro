@@ -47,7 +47,7 @@
                         </a>
                         @if (item.DisplayDiscountedPrice.HasValue)
                         {
-                            <span class="position-absolute top-0 end-0 bg-danger text-white px-3 py-1 m-2 rounded-pill fw-bold">
+                            <span class="position-absolute top-0 end-0 bg-warning text-black px-3 py-1 m-2 rounded-pill fw-bold">
                                 SAVE $@((item.DisplayPrice - item.DisplayDiscountedPrice.Value).ToString("0"))
                             </span>
                         }
@@ -60,10 +60,10 @@
                                 <span class="text-decoration-line-through text-muted">$@item.DisplayPrice.ToString("N0")</span>
                                 @if (item.DisplayDiscountedPrice.HasValue)
                                 {
-                                    <span class="h4 text-primary fw-bold ms-2">$@item.DisplayDiscountedPrice.Value.ToString("N0")</span>
+                                    <span class="h4 text-danger fw-bold ms-2">$@item.DisplayDiscountedPrice.Value.ToString("N0")</span>
                                 }
                             </div>
-                            <a href="/Trips/Details/@item.Id" class="btn btn-primary rounded-pill btn-sm">View Deal</a>
+                            <a href="/Trips/Details/@item.Id" class="btn btn-warning rounded-pill btn-sm">View Deal</a>
                         </div>
                     </div>
                 </div>

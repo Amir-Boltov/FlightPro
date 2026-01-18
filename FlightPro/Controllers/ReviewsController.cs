@@ -94,7 +94,8 @@ namespace FlightPro.Controllers
                     FROM Bookings b
                     JOIN PackageDates pd ON b.PackageDateId = pd.Id
                     JOIN Packages p ON pd.PackageId = p.Id
-                    WHERE b.UserId = @UserId 
+                    WHERE b.UserId = @UserId
+                    AND b.Status = 'Confirmed'
                     AND pd.EndDate < GETDATE()"; // Ensures trip is in the past
 
                 using (SqlCommand command = new SqlCommand(sqlUserPackages, connection))
